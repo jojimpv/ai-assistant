@@ -1,0 +1,60 @@
+[default]
+
+OPENAI_BASE_URL = "http://localhost:11434/v1"
+#FORM_PATH = "../data/Change_of_Address_Form_25.04.16.pdf"
+#FORM_PATH = "../data/sample-form-1.pdf"
+UPLOADS_DIR = "../media"
+DB_PATH = "../db.json"
+FORM_STATUS_UPLOADED = "UPLOADED"
+FORM_STATUS_PARSED = "PARSED"
+FORM_STATUS_QA = "QA"
+
+MODEL_PARSE= "mistral"
+#MODEL_PARSE= "gemma:2b"
+#MODEL_QA= "mistral"
+MODEL_QA= "gemma:2b"
+#PARSE_MODEL= "gemma:2b"
+
+FORM_PARSE_PROMT_PREFIX = """
+You are a helpful form filling helper.
+Your task is to extract form fields from the user supplied document.
+Form fields are the questions asked in the form.
+Exclude any text which looks like a disclimer and ignore signature place holders.
+Format reponse as plain Python list. Response need to be just the Python list without any prefix or introduction.
+
+Sample output
+=============
+["Name", "Email", "Phone"]
+
+Document content:
+=================
+"""
+
+FORM_QA_PROMT_PREFIX = """
+You are a helpful form filling helper.
+Your task is to give sample answers for the question being asked.
+Answer need to be one sentense (max 100 chars)
+
+Examples:
+========
+Question: Your name
+Answer: Joji
+
+Question: Country
+Answer: United Kingdom
+
+"""
+
+
+FORM_QA_DOC_PROMT_PREFIX = """
+You are a helpful form filling helper.
+Your task is to give answer for the question being asked.
+Answer need to be one sentense (max 100 chars).
+
+Below are the prior question-answer data that can be used to answer the question.
+
+Question-answer data:
+====================
+$qa_docs
+
+"""

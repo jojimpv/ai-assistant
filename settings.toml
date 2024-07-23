@@ -12,8 +12,8 @@ FORM_STATUS_QA = "QA"
 MODEL_PARSE= "mistral"
 #MODEL_PARSE= "gemma:2b"
 #MODEL_QA= "mistral"
-MODEL_QA= "gemma:2b"
-#PARSE_MODEL= "gemma:2b"
+#MODEL_QA= "gemma:2b"
+MODEL_QA= "qwen:4b"
 
 FORM_PARSE_PROMT_PREFIX = """
 You are a helpful form filling helper.

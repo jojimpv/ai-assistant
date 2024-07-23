@@ -21,7 +21,7 @@ client = OpenAI(
 )
 
 vector_db_client = chromadb.Client(Settings(persist_directory="content/"))
-collection = vector_db_client.create_collection(name="docs")
+collection = vector_db_client.create_collection(name="docs", metadata={"hnsw:space": "cosine"})
 
 
 def read_pdf_content(path):
@@ -47,7 +47,7 @@ def get_response_from_llm(prompt, model="mistral"):
         ]
     )
     response_content = response.choices[0].message.content
-    logger.info(f'Response received from LLM. Response length: {len(response_content)}')
+    logger.info(f'Response received from LLM ({model}). Response length: {len(response_content)}')
     return response_content
 
 
@@ -108,7 +108,7 @@ def create_docs_embeddings():
             answer=answer
         )
         doc_str = json.dumps(doc)
-        embedding = get_embeddings(doc_str)
+        embedding = get_embeddings(question)
         collection.add(
             ids=[str(doc_id)],
             embeddings=[embedding],
@@ -125,12 +125,20 @@ def get_embeddings(doc):
     return embedding
 
 
-def query_embeddings(embedding):
+def query_embeddings(embedding, similarity_threshold: float = 0.25):
     results = collection.query(
         query_embeddings=[embedding],
         n_results=2
     )
-    return results
+    documents = results['documents'][0]
+    distances = results['distances'][0]
+    filtered_documents = []
+    for index, distance in enumerate(distances):
+        if not distance <= similarity_threshold:
+            continue
+        filtered_documents.append(documents[index])
+    result_dict = dict(documents=[filtered_documents])
+    return result_dict
 
 
 def update_audit(event='form_process', form_id=None, task=None, sub_task=None, code='SUCCESS', error_msg=None, tags=''):

@@ -107,6 +107,7 @@ class UiApp:
             tb_upload_stats.update(dict(status=settings.FORM_STATUS_PARSED), doc_ids=[form_id])
         except Exception as error:
             code, error_msg = 'ERROR', str(error)
+            logger.exception('Error during Parse stage.')
         finally:
             update_audit(form_id=form_id, task=task, tags=tags, code=code, error_msg=error_msg)
         self.add_historic_forms()
@@ -129,6 +130,7 @@ class UiApp:
             tb_upload_stats.update(dict(status=settings.FORM_STATUS_QA), doc_ids=[form_id])
         except Exception as error:
             code, error_msg = 'ERROR', str(error)
+            logger.exception('Error during QA stage.')
         finally:
             update_audit(form_id=form_id, task=task, tags=tags, code=code, error_msg=error_msg)
         logger.info(f'Completed form QA for form_id: {form_id}.')

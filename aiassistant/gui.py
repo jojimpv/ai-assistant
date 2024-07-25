@@ -10,7 +10,7 @@ from nicegui import ui, events, run, app
 from slugify import slugify
 
 import aiassistant.api as api
-from aiassistant.core import update_audit, create_docs_embeddings
+from aiassistant.core import update_audit, create_docs_embeddings, update_embedding
 from aiassistant.database import tb_upload_stats, get_upload_stats, get_parse_stats, get_qa_stats, tb_parse_stats, \
     tb_qa_stats, get_next_question_answer, get_max_question_answer, save_user_answer, get_combined_qa, get_all_audit, \
     add_upload_stats
@@ -159,8 +159,10 @@ class UiApp:
                 answer = qa['answer']
                 source = qa['source']
                 icon = 'auto_fix_normal' if source == 'auto' else 'person'
-                with ui.expansion(text=question, icon=icon).props('header-class=text-blue dense switch-toggle-side').classes('w-full'):
-                    ui.textarea(value=answer).props('readonly outlined input-class=h-0 hide-bottom-space').classes('w-full')
+                with ui.expansion(text=question, icon=icon).props(
+                        'header-class=text-blue dense switch-toggle-side').classes('w-full'):
+                    ui.textarea(value=answer).props('readonly outlined input-class=h-0 hide-bottom-space').classes(
+                        'w-full')
         preview_dialog.open()
 
     def update_question_index(self, by=0):
@@ -179,6 +181,8 @@ class UiApp:
     def update_user_answer(self, answer: str):
         if self.current_answer_user.strip() != '' and self.current_answer_user.strip() != self.current_answer_auto.strip():
             save_user_answer(question_id=self.current_question_id, answer=answer)
+            update_embedding(form_id=self.current_form, question_id=self.current_question_id, answer=answer)
+            ui.notify('Corrections saved')
 
     def add_historic_forms(self):
         # logger.info(f'In add_historic_forms')
@@ -247,7 +251,8 @@ class UiApp:
                                   icon='play_arrow').props('flat color=blue')
                     elif form_status == settings.FORM_STATUS_QA:
                         with ui.column():
-                            ui.button('Proceed to User Input (Review)', on_click=lambda: self.handle_user_input(form_id=form_id),
+                            ui.button('Proceed to User Input (Review)',
+                                      on_click=lambda: self.handle_user_input(form_id=form_id),
                                       icon='play_arrow').props('flat color=blue')
                             ui.button('Preview Answers', on_click=lambda: self.handle_preview(form_id=form_id),
                                       icon='tour').props('flat color=blue')
@@ -293,13 +298,14 @@ with (user_input_dialog, ui.card().style('width: 1200px; max-width: none')):
         ui.button('Previous', on_click=lambda: ui_app.update_question_index(by=-1), icon='fast_rewind'
                   ).props('flat color=blue').bind_visibility_from(ui_app, 'user_input_previous_btn_visible')
         ui.button('Previous', icon='fast_rewind').props('disable flat color=blue').bind_visibility_from(ui_app,
-                                                                                        'user_input_previous_btn_not_visible')
+                                                                                                        'user_input_previous_btn_not_visible')
         ui.button('Next', on_click=lambda: ui_app.update_question_index(by=1), icon='fast_forward'
                   ).props('flat color=blue').bind_visibility_from(ui_app, 'user_input_next_btn_visible')
         ui.button('Next', icon='fast_forward').props('disable flat color=blue').bind_visibility_from(ui_app,
-                                                                                     'user_input_next_btn_not_visible')
+                                                                                                     'user_input_next_btn_not_visible')
         ui.space()
-        ui.button(on_click=lambda: (ui_app.reset_current_form_info(), user_input_dialog.close()), icon='close').props('flat color=blue')
+        ui.button(on_click=lambda: (ui_app.reset_current_form_info(), user_input_dialog.close()), icon='close').props(
+            'flat color=blue')
     ui.separator()
     ui.markdown().bind_content_from(ui_app, 'current_question', backward=lambda q: f'**Question:** {q} ?')
     ui.separator()
@@ -390,6 +396,8 @@ main_header = ui.header(elevated=True).style('background-color: green').classes(
 with main_header:
     with ui.button('New form', on_click=upload_dialog.open, icon='add').props('flat color=white'):
         ui.tooltip('Upload new form')
+    ui.space()
+    ui.label('AI Assistant').classes('text-lg font-bold')
     ui.space()
     with ui.link(target=load_audit_page, new_tab=True):
         with ui.button(icon='checklist_rtl').props('flat color=white'):

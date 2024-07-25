@@ -93,8 +93,15 @@ def get_max_question_answer(form_id):
     return qa_len
 
 
+def get_qa_doc_id_from_question_id(question_id: int):
+    QaStat = Query()
+    doc_id = tb_qa_stats.search(QaStat.question_id == question_id)[0].doc_id
+    return doc_id
+
+
 def save_user_answer(question_id, answer):
-    tb_qa_stats.update(dict(answer_user=answer), doc_ids=[question_id])
+    doc_id = get_qa_doc_id_from_question_id(question_id=question_id)
+    tb_qa_stats.update(dict(answer_user=answer), doc_ids=[doc_id])
     logger.info(f'Updated {question_id= } with {answer=}')
 
 

@@ -10,7 +10,8 @@ from chromadb.config import Settings
 from dynaconf import settings
 from openai import OpenAI
 
-from aiassistant.database import get_all_qa, get_parse_stats, get_audit_record, upsert_audit_record, tb_upload_stats
+from aiassistant.database import get_all_qa, get_parse_stats, get_audit_record, upsert_audit_record, tb_upload_stats, \
+    get_qa_doc_id_from_question_id
 from aiassistant.log import get_logger
 
 logger = get_logger(__name__)
@@ -123,6 +124,23 @@ def get_embeddings(doc):
     response = ollama.embeddings(model="mxbai-embed-large", prompt=doc)
     embedding = response["embedding"]
     return embedding
+
+
+def update_embedding(form_id: int, question_id: int, answer: str):
+    question = get_parse_stats(form_id=form_id, parse_id=question_id)['field']
+    doc_id = get_qa_doc_id_from_question_id(question_id=question_id)
+    doc = dict(
+        question=question,
+        answer=answer
+    )
+    doc_str = json.dumps(doc)
+    embedding = get_embeddings(question)
+    collection.upsert(
+        ids=[str(doc_id)],
+        embeddings=[embedding],
+        documents=[doc_str]
+    )
+    logger.info(f'Updated embedding for question_id: {question_id}')
 
 
 def query_embeddings(embedding, similarity_threshold: float = 0.25):

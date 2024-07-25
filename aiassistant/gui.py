@@ -35,8 +35,6 @@ class UiApp:
         self.current_answer_user = ""
         self.form_preview_data = None
         self.audit_records = []
-        # Initialize QA embeddings
-        create_docs_embeddings()
 
     def reset_current_form_info(self):
         self.current_form = None

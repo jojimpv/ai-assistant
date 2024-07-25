@@ -21,8 +21,8 @@ client = OpenAI(
     api_key='ollama',  # required, but unused
 )
 
-vector_db_client = chromadb.Client(Settings(persist_directory="content/"))
-collection = vector_db_client.create_collection(name="docs", metadata={"hnsw:space": "cosine"})
+vector_db_client = chromadb.PersistentClient(path='../chromadb_content')
+collection = vector_db_client.get_or_create_collection(name="docs", metadata={"hnsw:space": "cosine"})
 
 
 def read_pdf_content(path):

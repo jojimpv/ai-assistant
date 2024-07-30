@@ -1,5 +1,7 @@
 import ast
 import asyncio
+import math
+import os
 import time
 from pathlib import Path
 
@@ -66,8 +68,6 @@ class UiApp:
     async def handle_uploads(self, e: events.UploadEventArguments):
         global last_inserted_form_id
         file_content = e.content.read()
-        file_size = len(file_content)
-        logger.info(f'File size = {file_size}')
         Path(media_dir).mkdir(exist_ok=True)
         file_id = int(time.strftime('%Y%m%d%H%M%S', time.gmtime()))
         file_name = str(file_id) + '-' + slugify(Path(e.name).stem) + '.pdf'
@@ -77,6 +77,7 @@ class UiApp:
             logger.info(f'Writing file at {str(file_media_path)}')
             file_obj.write(file_content)
             logger.info(f'Uploaded file written to {str(file_media_path)}')
+        file_size = os.path.getsize(file_media_path)
         upload_stat = dict(
             name=e.name,
             file_name=file_name,
@@ -234,14 +235,14 @@ class UiApp:
                 upload_stat_columns = [
                     dict(name='name', label='Form Name', field='name', required=True, align='left'),
                     dict(name='file_name', label='File Name', field='file_name', required=True, align='left'),
-                    dict(name='file_size', label='File Size', field='file_size', required=True, align='center'),
+                    dict(name='file_size', label='File Size (KB)', field='file_size', required=True, align='center'),
                     dict(name='status', label='Status', field='status', required=True, align='left'),
                 ]
                 upload_stat_rows = [
                     dict(
                         name=upload_stat.get('name'),
                         file_name=upload_stat.get('file_name'),
-                        file_size=upload_stat.get('file_size'),
+                        file_size=int(math.ceil(upload_stat.get('file_size')/1024)),
                         status=form_status,
                     )
                 ]

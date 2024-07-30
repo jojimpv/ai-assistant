@@ -1,6 +1,5 @@
 import ast
 import asyncio
-import datetime
 import time
 from pathlib import Path
 
@@ -10,7 +9,8 @@ from nicegui import ui, events, run, app
 from slugify import slugify
 
 import aiassistant.api as api
-from aiassistant.core import update_audit, create_docs_embeddings, update_embedding
+import aiassistant.audit as audit
+from aiassistant.core import update_audit, update_embedding
 from aiassistant.database import tb_upload_stats, get_upload_stats, get_parse_stats, get_qa_stats, tb_parse_stats, \
     tb_qa_stats, get_next_question_answer, get_max_question_answer, save_user_answer, get_combined_qa, get_all_audit, \
     add_upload_stats
@@ -35,6 +35,7 @@ class UiApp:
         self.current_answer_user = ""
         self.form_preview_data = None
         self.audit_records = []
+        self.audit_records_for_form = []
 
     def reset_current_form_info(self):
         self.current_form = None
@@ -90,6 +91,8 @@ class UiApp:
         ui.notify(f'Uploaded {e.name}')
         # self.add_form_to_container(form_id=file_id, new=True)
         upload_dialog.close()
+        await self.handle_parse_form(form_id=file_id)
+        await self.handle_qa_form(form_id=file_id)
 
     async def handle_parse_form(self, form_id: int):
         parse_form_url = f'http://localhost:8080/api/parse_form/{form_id}'
@@ -185,7 +188,7 @@ class UiApp:
     def add_historic_forms(self):
         # logger.info(f'In add_historic_forms')
         forms_container.clear()
-        for upload_stat in tb_upload_stats.all():
+        for upload_stat in sorted(tb_upload_stats.all(), key=lambda rec: rec.doc_id, reverse=True):
             self.add_form_to_container(upload_stat.doc_id)
 
     def add_form_to_container(self, form_id=None):
@@ -210,6 +213,10 @@ class UiApp:
             dict(name='question', label='Question', field='question', required=True, align='left'),
             dict(name='answer_auto', label='Answer', field='answer_auto', required=True, align='left'),
         ]
+        qa_stat_columns_user = [
+            dict(name='question', label='Question', field='question', required=True, align='left'),
+            dict(name='answer_user', label='Answer', field='answer_user', required=False, align='left'),
+        ]
         qa_stat_rows = [
             dict(
                 doc_id=x.doc_id,
@@ -217,6 +224,7 @@ class UiApp:
                 question_id=x.get('question_id'),
                 question=get_parse_stats(form_id, parse_id=x.get('question_id'))['field'],
                 answer_auto=x.get('answer_auto'),
+                answer_user=x.get('answer_user', ""),
             ) for x in qa_stats
         ]
 
@@ -237,37 +245,44 @@ class UiApp:
                         status=form_status,
                     )
                 ]
-                with ui.row():
+                with ui.column():
                     # Upload stats table
                     ui.table(columns=upload_stat_columns, rows=upload_stat_rows, row_key='name')
                     # Next action button creation
-                    if upload_stat.get('status') == settings.FORM_STATUS_UPLOADED:
-                        ui.button('Proceed to Parse', on_click=lambda: self.handle_parse_form(form_id=form_id),
+                    with ui.row():
+                        if form_status == settings.FORM_STATUS_QA:
+                            with ui.column():
+                                ui.button('User Input (Review)',
+                                          on_click=lambda: self.handle_user_input(form_id=form_id),
+                                          icon='play_arrow').props('flat color=blue')
+                                ui.button('Preview Answers', on_click=lambda: self.handle_preview(form_id=form_id),
+                                          icon='tour').props('flat color=blue')
+                        ui.button('Track form process',
+                                  on_click=lambda: self.load_audit_records(form_id=form_id),
                                   icon='play_arrow').props('flat color=blue')
-                    elif form_status == settings.FORM_STATUS_PARSED:
-                        ui.button('Proceed to QA (Auto)', on_click=lambda: self.handle_qa_form(form_id=form_id),
-                                  icon='play_arrow').props('flat color=blue')
-                    elif form_status == settings.FORM_STATUS_QA:
-                        with ui.column():
-                            ui.button('Proceed to User Input (Review)',
-                                      on_click=lambda: self.handle_user_input(form_id=form_id),
-                                      icon='play_arrow').props('flat color=blue')
-                            ui.button('Preview Answers', on_click=lambda: self.handle_preview(form_id=form_id),
-                                      icon='tour').props('flat color=blue')
-                    else:
-                        ui.button('Preview')
                 # Tabs for stage status details
                 with ui.tabs().props('align=left').classes('w-full bg-green-500 text-white') as tabs:
                     parse_tab = ui.tab('Parse')
-                    qa_tab = ui.tab('QA')
+                    qa_tab = ui.tab('QA (Auto)')
+                    qa_tab_user = ui.tab('QA (User)')
                 with ui.tab_panels(tabs, value=parse_tab).classes('w-full bg-green-50'):
                     with ui.tab_panel(parse_tab):
                         ui.table(columns=parse_stat_columns, rows=parse_stat_rows, row_key='field_name')
                     with ui.tab_panel(qa_tab):
                         ui.table(columns=qa_stat_columns, rows=qa_stat_rows, row_key='field_name')
+                    with ui.tab_panel(qa_tab_user):
+                        ui.table(columns=qa_stat_columns_user, rows=qa_stat_rows, row_key='field_name')
 
-    def load_audit_records(self):
-        self.audit_records = get_all_audit()
+    def load_audit_records(self, form_id):
+        self.audit_records_for_form = [audit.get_formatted_audit_row(x) for x in get_all_audit(form_id=form_id)]
+        audit_dialog.clear()
+        with (audit_dialog, ui.card().style('width: 1200px; min-width: fit-content;')):
+            ui.table(
+                columns=audit.audit_columns_form,
+                rows=self.audit_records_for_form,
+                row_key='event'
+            ).props('dense table-header-class="text-blue" title-class="text-green"')
+        audit_dialog.open()
 
     def filter_audit_records(self):
         self.audit_records = [x for x in self.audit_records if x['event'] == 'form_process']
@@ -330,64 +345,8 @@ with (user_input_dialog, ui.card().style('width: 1200px; max-width: none')):
 # Preview dialog (hidden by default)
 preview_dialog = ui.dialog()  # .props('maximized')
 
-
-@ui.page('/audit')
-def load_audit_page():
-    ui_app.load_audit_records()
-    current_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-    audit_columns = [
-        dict(name='event', label='EVENT', field='event', required=True, align='left'),
-        dict(name='task', label='TASK', field='task', required=False, align='left'),
-        dict(name='sub_task', label='SUB TASK', field='sub_task', required=False, align='left'),
-        dict(name='form_id', label='FORM ID', field='form_id', required=False, align='left'),
-        dict(name='start', label='START TIME', field='start', required=True, align='left'),
-        dict(name='end', label='END TIME', field='end', required=False, align='left'),
-        dict(name='duration', label='DURATION', field='duration', required=False, align='center'),
-        dict(name='code', label='CODE', field='code', required=True, align='left'),
-        dict(name='tags', label='TAGS', field='tags', required=False, align='left'),
-        dict(name='error_msg', label='ERROR MESSAGE', field='error_msg', required=False, align='left'),
-    ]
-    audit_rows = []
-    for x in ui_app.audit_records:
-        start_time = x.get('start_time')
-        end_time = x.get('end_time')
-        start = datetime.datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S') if start_time else ''
-        end = datetime.datetime.fromtimestamp(end_time).strftime('%Y-%m-%d %H:%M:%S') if end_time else ''
-        time_diff = end_time - start_time if (start_time and end_time) else None
-        duration = str(datetime.timedelta(seconds=int(time_diff))) if time_diff else ''
-        audit_row = dict(
-            event=x.get('event'),
-            task=x.get('task'),
-            sub_task=x.get('sub_task'),
-            code=x.get('code'),
-            form_id=x.get('form_id'),
-            tags=x.get('tags'),
-            error_msg=x.get('error_msg'),
-            start=start,
-            end=end,
-            duration=duration,
-        )
-        audit_rows.append(audit_row)
-    # Tabs for All and 'Form process only'
-    with ui.tabs().props('align=left').classes('w-full bg-blue text-white') as tabs:
-        all_tab = ui.tab(f'Audit Records (as of {current_time})')
-        fpo_tab = ui.tab('Form processes')
-    with ui.tab_panels(tabs, value=all_tab).classes('w-full'):
-        with ui.tab_panel(all_tab):
-            ui.table(
-                columns=audit_columns,
-                rows=audit_rows,
-                row_key='event',
-                pagination=15
-            ).props('dense table-header-class="text-blue"')
-        with ui.tab_panel(fpo_tab):
-            ui.table(
-                columns=audit_columns,
-                rows=[x for x in audit_rows if x['event'] == 'form_process'],
-                row_key='event',
-                pagination=15
-            ).props('dense table-header-class="text-blue" title-class="text-green"')
-
+# Audit for a single form (hidden by default)
+audit_dialog = ui.dialog().classes('w-full')
 
 # UI Header
 main_header = ui.header(elevated=True).style('background-color: green').classes('items-center justify-between')
@@ -397,7 +356,7 @@ with main_header:
     ui.space()
     ui.label('AI Assistant').classes('text-lg font-bold')
     ui.space()
-    with ui.link(target=load_audit_page, new_tab=True):
+    with ui.link(target=audit.load_audit_page, new_tab=True):
         with ui.button(icon='checklist_rtl').props('flat color=white'):
             ui.tooltip('Audit data process timings')
 
@@ -405,6 +364,7 @@ with main_header:
             'flat color=white'):
         ui.tooltip('Shutdown the app!')
 
-logger.info(f'APIs loaded from {api}')
+logger.info(f'API module loaded from {api}')
+logger.info(f'Audit module loaded from {audit}')
 
 ui.run(reload=False, show=False, title='AI Assistant', favicon='📝')

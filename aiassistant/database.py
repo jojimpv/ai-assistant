@@ -125,5 +125,10 @@ def upsert_audit_record(delta: dict, doc_id=None):
         tb_audit.insert(delta)
 
 
-def get_all_audit():
-    return sorted(tb_audit.all(), key=lambda x: x['start_time'], reverse=True)
+def get_all_audit(form_id=None):
+    if form_id:
+        Audit = Query()
+        audit_records = tb_audit.search(Audit.form_id == form_id)
+    else:
+        audit_records = tb_audit.all()
+    return sorted(audit_records, key=lambda x: x['start_time'], reverse=True)

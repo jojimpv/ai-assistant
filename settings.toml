@@ -58,3 +58,7 @@ Question-answer data:
 $qa_docs
 
 """
+
+[testing]
+DB_PATH = "../test_db.json"
+CHROMADB_PATH = "../test_chromadb_content"

@@ -1,27 +1,20 @@
-import ast
+import asyncio
 import asyncio
 import math
-import os
-import time
-from pathlib import Path
 
-import requests
 from dynaconf import settings
-from nicegui import ui, events, run, app
-from slugify import slugify
+from nicegui import ui, events, app
 
 import aiassistant.api as api
 import aiassistant.audit as audit
-from aiassistant.core import update_audit, update_embedding
-from aiassistant.database import tb_upload_stats, get_upload_stats, get_parse_stats, get_qa_stats, tb_parse_stats, \
-    tb_qa_stats, get_next_question_answer, get_max_question_answer, save_user_answer, get_combined_qa, get_all_audit, \
-    add_upload_stats
+from aiassistant.backend import process_uploads, process_parse_form, process_qa_form
+from aiassistant.core import update_embedding
+from aiassistant.database import tb_upload_stats, get_upload_stats, get_parse_stats, get_qa_stats, \
+    get_next_question_answer, get_max_question_answer, save_user_answer, get_combined_qa, get_all_audit
 from aiassistant.log import get_logger
 
 logger = get_logger(__name__)
 media_dir = settings.UPLOADS_DIR
-
-last_inserted_form_id = None
 
 
 class UiApp:
@@ -66,76 +59,23 @@ class UiApp:
         return self.current_question_index >= self.current_form_max_question_index - 1
 
     async def handle_uploads(self, e: events.UploadEventArguments):
-        global last_inserted_form_id
-        file_content = e.content.read()
-        Path(media_dir).mkdir(exist_ok=True)
-        file_id = int(time.strftime('%Y%m%d%H%M%S', time.gmtime()))
-        file_name = str(file_id) + '-' + slugify(Path(e.name).stem) + '.pdf'
-        file_media_path = Path(media_dir) / file_name
-        update_audit(form_id=file_id, task='UPLOAD')
-        with open(file_media_path, 'wb') as file_obj:
-            logger.info(f'Writing file at {str(file_media_path)}')
-            file_obj.write(file_content)
-            logger.info(f'Uploaded file written to {str(file_media_path)}')
-        file_size = os.path.getsize(file_media_path)
-        upload_stat = dict(
-            name=e.name,
-            file_name=file_name,
-            file_size=file_size,
-            status=settings.FORM_STATUS_UPLOADED
-        )
-        add_upload_stats(upload_stat=upload_stat, file_id=file_id)
-        update_audit(form_id=file_id, task='UPLOAD')
-        last_inserted_form_id = file_id
+        file_id = process_uploads(name=e.name, file_content=e.content.read())
         await asyncio.sleep(0.5)
         self.add_historic_forms()
-        ui.notify(f'Uploaded {e.name}')
-        # self.add_form_to_container(form_id=file_id, new=True)
         upload_dialog.close()
+        ui.notify(f'Uploaded {e.name}')
         await self.handle_parse_form(form_id=file_id)
         await self.handle_qa_form(form_id=file_id)
 
     async def handle_parse_form(self, form_id: int):
-        parse_form_url = f'http://localhost:8080/api/parse_form/{form_id}'
         ui.notify(f'Starting form parsing for form_id: {form_id}')
-        task, code, error_msg, tags = 'PARSE', 'SUCCESS', None, f'model_parse={settings.MODEL_PARSE}'
-        update_audit(form_id=form_id, task=task, tags=tags)
-        try:
-            response = await run.io_bound(requests.get, parse_form_url, timeout=900)
-            response.raise_for_status()
-            form_fields = ast.literal_eval(response.json()['form_fields'])
-            parse_form_docs = [dict(form_id=form_id, field=x) for x in form_fields]
-            tb_parse_stats.insert_multiple(parse_form_docs)
-            tb_upload_stats.update(dict(status=settings.FORM_STATUS_PARSED), doc_ids=[form_id])
-        except Exception as error:
-            code, error_msg = 'ERROR', str(error)
-            logger.exception('Error during Parse stage.')
-        finally:
-            update_audit(form_id=form_id, task=task, tags=tags, code=code, error_msg=error_msg)
+        await process_parse_form(form_id=form_id)
         self.add_historic_forms()
         ui.notify(f'Completed form parsing for form_id: {form_id}.')
 
     async def handle_qa_form(self, form_id: int):
-        qa_form_url = f'http://localhost:8080/api/qa_form/{form_id}'
-        logger.info(f'Starting form QA for form_id: {form_id}')
         ui.notify(f'Starting form QA for form_id: {form_id}')
-        task, code, error_msg, tags = 'AUTO_QA', 'SUCCESS', None, f'model_qa={settings.MODEL_QA}'
-        update_audit(form_id=form_id, task=task, tags=tags)
-        try:
-            response = await run.io_bound(requests.get, qa_form_url, timeout=900)
-            response.raise_for_status()
-            qa_response = response.json()
-            qa_stats = qa_response['qa_stats']
-            logger.info(f'Adding {len(qa_stats)} qa_stats to DB')
-            qa_form_docs = [{**dict(form_id=form_id), **qa_stat} for qa_stat in qa_stats]
-            tb_qa_stats.insert_multiple(qa_form_docs)
-            tb_upload_stats.update(dict(status=settings.FORM_STATUS_QA), doc_ids=[form_id])
-        except Exception as error:
-            code, error_msg = 'ERROR', str(error)
-            logger.exception('Error during QA stage.')
-        finally:
-            update_audit(form_id=form_id, task=task, tags=tags, code=code, error_msg=error_msg)
-        logger.info(f'Completed form QA for form_id: {form_id}.')
+        await process_qa_form(form_id=form_id)
         ui.notify(f'Completed form QA for form_id: {form_id}.')
         self.add_historic_forms()
 
@@ -192,9 +132,8 @@ class UiApp:
         for upload_stat in sorted(tb_upload_stats.all(), key=lambda rec: rec.doc_id, reverse=True):
             self.add_form_to_container(upload_stat.doc_id)
 
-    def add_form_to_container(self, form_id=None):
+    def add_form_to_container(self, form_id):
         # logger.info(f'In add_form_to_container with form_id: {form_id}')
-        form_id = form_id if form_id else last_inserted_form_id
         upload_stat = get_upload_stats(form_id=form_id)
         form_status = upload_stat.get('status')
         title = f'{form_id} | {upload_stat.get("name")}'
@@ -242,7 +181,7 @@ class UiApp:
                     dict(
                         name=upload_stat.get('name'),
                         file_name=upload_stat.get('file_name'),
-                        file_size=int(math.ceil(upload_stat.get('file_size')/1024)),
+                        file_size=int(math.ceil(upload_stat.get('file_size') / 1024)),
                         status=form_status,
                     )
                 ]

@@ -61,5 +61,6 @@ $qa_docs
 """
 
 [testing]
+UPLOADS_DIR = "../test_media"
 DB_PATH = "../test_db.json"
 CHROMADB_PATH = "../test_chromadb_content"

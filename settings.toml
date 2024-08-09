@@ -60,7 +60,60 @@ $qa_docs
 
 """
 
+INTERVIEWER_PROMPT = """
+You are an interviewer asking questions by looking at a government form.
+The questions shouldn't be exactly same as what is given in the government form, but similar to it.
+Please create the questions and plausible answers for each question.
+The length of answers need to be limited to 100 words.
+
+Assume the questions are being asked to a user with demographics given below.
+Ask minimum questions.
+
+Demographics:
+=============
+{demographics}
+
+
+Government form content
+=======================
+{gov_form}
+
+"""
+
+EVALUATION_PROMPT = """###Task Description:
+An instruction (might include an Input inside it), a response to evaluate, a reference answer that gets a score of 5, and a score rubric representing a evaluation criteria are given.
+1. Write a detailed feedback that assess the quality of the response strictly based on the given score rubric, not evaluating in general.
+2. After writing a feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
+3. The output format should look as follows: \"Feedback: {{write a feedback for criteria}} [RESULT] {{an integer number between 1 and 5}}\"
+4. Please do not generate any other opening, closing, and explanations. Be sure to include [RESULT] in your output.
+
+###The instruction to evaluate:
+{instruction}
+
+###Response to evaluate:
+{response}
+
+###Reference Questions and Answers:
+{reference_answer}
+
+###Score Rubrics:
+[Is the response correct, accurate, and factual based on the reference answer?]
+Score 1: The response is completely incorrect, inaccurate, and/or not factual.
+Score 2: The response is mostly incorrect, inaccurate, and/or not factual.
+Score 3: The response is somewhat correct, accurate, and/or factual.
+Score 4: The response is mostly correct, accurate, and factual.
+Score 5: The response is completely correct, accurate, and factual.
+
+###Feedback:"""
+
+
 [testing]
-UPLOADS_DIR = "../test_media"
-DB_PATH = "../test_db.json"
-CHROMADB_PATH = "../test_chromadb_content"
+UPLOADS_DIR = "../tests/media"
+DB_PATH = "../tests/db.json"
+CHROMADB_PATH = "../tests/chromadb_content"
+TEST_FORM_PATH = "../data/sample-form-1.pdf"
+TEST_RESULTS_PATH = "../tests/results"
+TEST_EVALUATIONS_PATH = "../tests/evaluations"
+REFERENCE_FORM_ID = 1
+MODEL_TEST = "mistral"
+MODEL_EVAL = "mistral"

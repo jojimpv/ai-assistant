@@ -100,6 +100,16 @@ def save_score(form_meta, score_info):
         logger.info(f'Saved evaluation scores at {evaluation_score_path}')
 
 
+def check_eval_key_exists(form_id):
+    score_key = f'score_{slugify(settings.MODEL_EVAL)}'
+    evaluation_score_path = Path(settings.TEST_EVALUATIONS_PATH) / f'eval_{form_id}.json'
+    if evaluation_score_path.exists() and evaluation_score_path.is_file():
+        with open(evaluation_score_path) as evaluation_score_file:
+            evaluation_scores = [x for x in Box(json.load(evaluation_score_file)) if x.startswith('score_')]
+            if score_key in evaluation_scores:
+                return True
+
+
 async def main():
     logger.info(f'Started evaluation using model: {settings.MODEL_EVAL}')
     setup()
@@ -109,6 +119,10 @@ async def main():
         try:
             logger.info(f'Processing result backup file at: {db_backup}')
             form_meta = get_form_meta(path=db_backup)
+            if check_eval_key_exists(form_id=form_meta.form_id):
+                logger.info(f'Evaluation using model: {settings.MODEL_EVAL} already exists '
+                            f'for for form_id {form_meta.form_id}')
+                continue
             replace_test_db_file(path=db_backup)
             score_info = check_score(ref_form_id=1, form_id=form_meta.form_id)
             save_score(form_meta, score_info)

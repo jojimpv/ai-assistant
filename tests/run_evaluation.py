@@ -15,7 +15,7 @@ from tqdm import tqdm
 from aiassistant.database import get_combined_qa
 from aiassistant.log import get_logger
 
-eval_chat_model = ChatOpenAI(
+model_eval_judge = ChatOpenAI(
     model=settings.MODEL_EVAL,
     temperature=0,
     base_url=settings.OPENAI_BASE_URL,
@@ -46,12 +46,12 @@ def check_score(ref_form_id, form_id):
         question = qa_dict["question"]
         answer = qa_dict["answer"]
         eval_prompt = evaluation_prompt_template.format_messages(
-            instruction=question,
-            response=answer,
-            reference_answer=qa_display_str,
+            question=question,
+            answer=answer,
+            reference_qa=qa_display_str,
         )
-        eval_result = eval_chat_model.invoke(eval_prompt)
-        logger.info(f'{eval_result.content = }')
+        eval_result = model_eval_judge.invoke(eval_prompt)
+        # logger.info(f'{eval_result.content = }')
         feedback, score = [item.strip() for item in eval_result.content.split("[RESULT]")]
         logger.info(f'{question = }, {answer = }, {score = }, {feedback = }')
         scores.append(dict(
@@ -115,20 +115,24 @@ async def main():
     setup()
     results_db_backups = get_results_db_backups()
     logger.info(f'Number of results db backups: {len(results_db_backups)}')
+    eval_key_exists_count = 0
+    new_eval_key_count = 0
     for db_backup in tqdm(results_db_backups, desc='Processing DB backup'):
         try:
-            logger.info(f'Processing result backup file at: {db_backup}')
             form_meta = get_form_meta(path=db_backup)
             if check_eval_key_exists(form_id=form_meta.form_id):
-                logger.info(f'Evaluation using model: {settings.MODEL_EVAL} already exists '
-                            f'for for form_id {form_meta.form_id}')
+                logger.debug(f'Evaluation using model: {settings.MODEL_EVAL} already exists '
+                             f'for for form_id {form_meta.form_id}')
+                eval_key_exists_count += 1
                 continue
+            logger.info(f'Processing score calculation for result backup file at: {db_backup}')
+            new_eval_key_count += 1
             replace_test_db_file(path=db_backup)
             score_info = check_score(ref_form_id=1, form_id=form_meta.form_id)
             save_score(form_meta, score_info)
         except Exception as error:
             logger.exception(f'Evaluation error while processing {db_backup} file. Details: {str(error)}')
-    logger.info('Completed evaluation')
+    logger.info(f'Completed evaluation. Counts: {new_eval_key_count}(new), {eval_key_exists_count}(skipped).')
 
 
 if __name__ == '__main__':

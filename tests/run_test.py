@@ -20,9 +20,9 @@ from aiassistant.log import get_logger
 # GOV_FORM_PATH = '../data/Change_of_Address_Form_25.04.16.pdf'
 TEST_FORM_PATH = settings.TEST_FORM_PATH
 REFERENCE_FORM_ID = 1
-model = ChatOpenAI(
+model_eval_ds = ChatOpenAI(
     model=settings.MODEL_TEST,
-    temperature=0,
+    temperature=1.0,
     base_url=settings.OPENAI_BASE_URL,
     api_key='ollama'
 )
@@ -59,7 +59,6 @@ def get_prompt_for_llm(user_demographics, gov_form_content):
 
 
 def get_evaluation_dataset():
-    logger.info(f'Started evaluation dataset LLM call')
     user_demographics = get_basic_user_profile()
     gov_form_content = read_pdf_content(TEST_FORM_PATH)
     user_prompt = get_prompt_for_llm(user_demographics=user_demographics, gov_form_content=gov_form_content)
@@ -69,9 +68,11 @@ def get_evaluation_dataset():
         input_variables=["query"],
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
+    model = model_eval_ds
     chain = prompt | model | parser
+    logger.info(f'Started evaluation dataset creation LLM call')
     result = chain.invoke({"query": user_prompt})
-    logger.info(f'Finished evaluation dataset LLM call')
+    logger.info(f'Finished evaluation dataset creation LLM call')
     return result
 
 
@@ -137,7 +138,7 @@ def backup_db(form_id):
 
 
 async def main():
-    logger.info('Started evaluation')
+    logger.info('Started test')
     logger.info(f'=== Stage 0: Clear DB entries and init reference form ===')
     ref_form_id = setup()
     logger.info(f'=== Stage 1: Create DB entries for reference form ===')

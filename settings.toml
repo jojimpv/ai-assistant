@@ -56,16 +56,17 @@ $qa_docs
 """
 
 INTERVIEWER_PROMPT = """
-You are an interviewer asking questions by looking at a government form.
-The questions shouldn't be exactly same as what is given in the government form, but similar to it.
+You are an interviewer asking questions to a user by reffering to a government form (having questions).
+The questions asked shouldn't be exactly same as what is given in the government form, but similar to it.
 Please create the questions and plausible answers for each question.
 The length of answers need to be limited to 100 words.
 
 Assume the questions are being asked to a user with demographics given below.
-Ask minimum questions.
+Ask as many questions as possible.
+IMPORTANT: Please follow the json format specified and make sure the response is valid json with key "qa" in it's root.
 
-Demographics:
-=============
+User Demographics:
+=================
 {demographics}
 
 
@@ -76,37 +77,44 @@ Government form content
 """
 
 EVALUATION_PROMPT = """###Task Description:
-An instruction (might include an Input inside it), a response to evaluate, a reference answer that gets a score of 5, and a score rubric representing a evaluation criteria are given.
+You are given:
+1. A question.
+2. An answer to evaluate.
+3. A number of previous question-answer pairs to be used as reference context.
+4. A score rubric representing evaluation criteria.
+
+Your task is:
 1. Write a detailed feedback that assess the quality of the response strictly based on the given score rubric, not evaluating in general.
 2. After writing a feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
 3. The output format should look as follows: \"Feedback: {{write a feedback for criteria}} [RESULT] {{an integer number between 1 and 5}}\"
 4. Please do not generate any other opening, closing, and explanations. Be sure to include [RESULT] in your output.
 
-###The instruction to evaluate:
-{instruction}
+###The Question:
+{question}
 
-###Response to evaluate:
-{response}
+###Answer to evaluate:
+{answer}
 
 ###Reference Questions and Answers:
-{reference_answer}
+{reference_qa}
 
 ###Score Rubrics:
-[Is the response correct, accurate, and factual based on the reference answer?]
-Score 1: The response is completely incorrect, inaccurate, and/or not factual.
-Score 2: The response is mostly incorrect, inaccurate, and/or not factual.
-Score 3: The response is somewhat correct, accurate, and/or factual.
-Score 4: The response is mostly correct, accurate, and factual.
-Score 5: The response is completely correct, accurate, and factual.
+[Is the response correct, accurate, and factual based on the reference context?]
+Score 0: The given context is insufficent to answer the question asked.
+Score 1: The answer is completely incorrect, inaccurate, and/or not factual.
+Score 2: The answer is mostly incorrect, inaccurate, and/or not factual.
+Score 3: The answer is somewhat correct, accurate, and/or factual.
+Score 4: The answer is mostly correct, accurate, and factual.
+Score 5: The answer is completely correct, accurate, and factual.
 
 ###Feedback:"""
-
 
 [testing]
 UPLOADS_DIR = "../tests/media"
 DB_PATH = "../tests/db.json"
 CHROMADB_PATH = "../tests/chromadb"
-TEST_FORM_PATH = "../data/Change_of_Address_Form_25.04.16.pdf"
+#TEST_FORM_PATH = "../data/Change_of_Address_Form_25.04.16.pdf"
+TEST_FORM_PATH = "../data/sample-form-2.pdf"
 TEST_RESULTS_PATH = "../tests/results"
 TEST_EVALUATIONS_PATH = "../tests/evaluations"
 REFERENCE_FORM_ID = 1

@@ -6,8 +6,10 @@ from string import Template
 import chromadb
 import ollama
 import pdfplumber
-from chromadb.config import Settings
 from dynaconf import settings
+from langchain_core.output_parsers import CommaSeparatedListOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
 from aiassistant.database import get_all_qa, get_parse_stats, get_audit_record, upsert_audit_record, tb_upload_stats, \
@@ -19,6 +21,13 @@ logger = get_logger(__name__)
 client = OpenAI(
     base_url=settings.OPENAI_BASE_URL,
     api_key='ollama',  # required, but unused
+)
+
+model_parse = ChatOpenAI(
+    model=settings.MODEL_PARSE,
+    temperature=0,
+    base_url=settings.OPENAI_BASE_URL,
+    api_key='ollama'
 )
 
 vector_db_client = chromadb.PersistentClient(path=settings.CHROMADB_PATH)
@@ -60,8 +69,15 @@ def parse_with_llm(form_id: int):
     doc = read_pdf_content(path=file_path)
     user_prompt = settings.FORM_PARSE_PROMT_PREFIX + '\n' + doc
     logger.info(f'started parsing pdf')
-    response = get_response_from_llm(prompt=user_prompt, model=settings.MODEL_PARSE)
-    # response = '''["First Name", "Last Name", "Address", "Tax Identification number(TIN)"]'''
+    parser = CommaSeparatedListOutputParser()
+    prompt = PromptTemplate(
+        template="Answer the user query.\n{format_instructions}\n{query}\n",
+        input_variables=["query"],
+        partial_variables={"format_instructions": parser.get_format_instructions()},
+    )
+    model = model_parse
+    chain = prompt | model | parser
+    response = chain.invoke({"query": user_prompt})
     logger.info(f'List of form fields: {response}')
     logger.info(f'completed parsing pdf')
     return response

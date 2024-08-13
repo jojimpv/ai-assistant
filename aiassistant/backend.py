@@ -46,7 +46,7 @@ async def process_parse_form(form_id: int):
     try:
         response = await run.io_bound(requests.get, parse_form_url, timeout=900)
         response.raise_for_status()
-        form_fields = ast.literal_eval(response.json()['form_fields'])
+        form_fields = response.json()['form_fields']
         parse_form_docs = [dict(form_id=form_id, field=x) for x in form_fields]
         tb_parse_stats.insert_multiple(parse_form_docs)
         tb_upload_stats.update(dict(status=settings.FORM_STATUS_PARSED), doc_ids=[form_id])

@@ -21,11 +21,6 @@ You are a helpful form filling helper.
 Your task is to extract form fields from the user supplied document.
 Form fields are the questions asked in the form.
 Exclude any text which looks like a disclimer and ignore signature place holders.
-Format reponse as plain Python list. Response need to be just the Python list without any prefix or introduction.
-
-Sample output
-=============
-["Name", "Email", "Phone"]
 
 Document content:
 =================

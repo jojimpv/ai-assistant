@@ -6,17 +6,15 @@ from typing import List
 
 from dynaconf import settings
 from faker import Faker
-from langchain.schema import SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_openai import ChatOpenAI
-from tqdm import tqdm
 
 from aiassistant.backend import process_uploads, process_parse_form, process_qa_form
 from aiassistant.core import collection as vectordb_collection
 from aiassistant.core import read_pdf_content, update_audit, update_embedding
-from aiassistant.database import add_upload_stats, tb_qa_stats, tb_upload_stats, tb_parse_stats, db, get_combined_qa
+from aiassistant.database import add_upload_stats, tb_qa_stats, tb_upload_stats, tb_parse_stats, db
 from aiassistant.log import get_logger
 
 # GOV_FORM_PATH = '../data/Change_of_Address_Form_25.04.16.pdf'

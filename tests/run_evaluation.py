@@ -1,6 +1,7 @@
 import asyncio
 import json
 import shutil
+import sys
 from glob import glob
 from pathlib import Path
 
@@ -63,8 +64,21 @@ def check_score(ref_form_id, form_id):
     return scores
 
 
-def get_results_db_backups():
-    return glob(f'{settings.TEST_RESULTS_PATH}/*.json')
+def get_results_db_backups(result_form_id=None):
+    if result_form_id:
+        return glob(f'{settings.TEST_RESULTS_PATH}/*{result_form_id}.json'), 0
+    all_result_backups = glob(f'{settings.TEST_RESULTS_PATH}/*.json')
+    filtered_result_backups = []
+    eval_key_exists_count = 0
+    for db_backup in all_result_backups:
+        form_meta = get_form_meta(path=db_backup)
+        if not check_eval_key_exists(form_id=form_meta.form_id):
+            filtered_result_backups.append(db_backup)
+        else:
+            eval_key_exists_count += 1
+            logger.debug(f'Evaluation using model: {settings.MODEL_EVAL} already exists '
+                         f'for for form_id {form_meta.form_id}')
+    return filtered_result_backups, eval_key_exists_count
 
 
 def get_form_meta(path):
@@ -117,30 +131,24 @@ def check_eval_key_exists(form_id):
                 return True
 
 
-async def main():
+async def main(result_form_id=None):
     logger.info(f'Started evaluation using model: {settings.MODEL_EVAL}')
     setup()
-    results_db_backups = get_results_db_backups()
-    logger.info(f'Number of results db backups: {len(results_db_backups)}')
-    eval_key_exists_count = 0
-    new_eval_key_count = 0
+    results_db_backups, skip_count = get_results_db_backups(result_form_id=result_form_id)
+    logger.info(f'Number of results db backups to be processed: {len(results_db_backups)}')
+    new_eval_key_count = len(results_db_backups)
     for db_backup in tqdm(results_db_backups, desc='Processing DB backup'):
         try:
             form_meta = get_form_meta(path=db_backup)
-            if check_eval_key_exists(form_id=form_meta.form_id):
-                logger.debug(f'Evaluation using model: {settings.MODEL_EVAL} already exists '
-                             f'for for form_id {form_meta.form_id}')
-                eval_key_exists_count += 1
-                continue
             logger.info(f'Processing score calculation for result backup file at: {db_backup}')
-            new_eval_key_count += 1
             replace_test_db_file(path=db_backup)
             score_info = check_score(ref_form_id=1, form_id=form_meta.form_id)
             save_score(form_meta, score_info)
         except Exception as error:
             logger.exception(f'Evaluation error while processing {db_backup} file. Details: {str(error)}')
-    logger.info(f'Completed evaluation. Counts: {new_eval_key_count}(new), {eval_key_exists_count}(skipped).')
+    logger.info(f'Completed evaluation. Counts: {new_eval_key_count}(new), {skip_count}(skipped).')
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    args = sys.argv[1:]
+    asyncio.run(main(*args))

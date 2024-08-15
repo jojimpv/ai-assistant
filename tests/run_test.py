@@ -70,9 +70,9 @@ def get_evaluation_dataset():
     )
     model = model_eval_ds
     chain = prompt | model | parser
-    logger.info(f'Started evaluation dataset creation LLM call')
+    logger.info(f'Started evaluation dataset creation LLM({settings.MODEL_TEST}) call')
     result = chain.invoke({"query": user_prompt})
-    logger.info(f'Finished evaluation dataset creation LLM call')
+    logger.info(f'Finished evaluation dataset creation LLM({settings.MODEL_TEST}) call')
     return result
 
 
@@ -152,7 +152,7 @@ async def main():
     logger.info(f'=== Stage 2.3: QA test form ===')
     await process_qa_form(form_id=form_id)
     backup_db(form_id=form_id)
-    logger.info('Completed evaluation')
+    logger.info('Completed test')
 
 
 if __name__ == '__main__':

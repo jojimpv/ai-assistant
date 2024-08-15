@@ -42,7 +42,7 @@ def check_score(ref_form_id, form_id):
     )
 
     scores = []
-    for qa_dict in tqdm(qa_test, desc='Processing QA'):
+    for qa_dict in tqdm(qa_test, desc=f'Processing QA [{form_id}]'):
         question = qa_dict["question"]
         answer = qa_dict["answer"]
         eval_prompt = evaluation_prompt_template.format_messages(
@@ -90,12 +90,19 @@ def setup():
 def save_score(form_meta, score_info):
     form_id = form_meta.form_id
     evaluation_score_path = Path(settings.TEST_EVALUATIONS_PATH) / f'eval_{form_id}.json'
+    scores = dict()
+    if evaluation_score_path.exists() and evaluation_score_path.is_file():
+        with open(evaluation_score_path, 'r') as evaluation_file:
+            scores = json.load(evaluation_file)
     with open(evaluation_score_path, 'w+') as evaluation_file:
         score_key = f'score_{slugify(settings.MODEL_EVAL)}'
-
+        new_scores = {
+            score_key: score_info
+        }
+        scores.update(new_scores)
         json.dump({
             **form_meta,
-            score_key: score_info
+            **scores
         }, fp=evaluation_file)
         logger.info(f'Saved evaluation scores at {evaluation_score_path}')
 

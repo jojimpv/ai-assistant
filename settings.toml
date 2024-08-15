@@ -113,8 +113,12 @@ Score 5: The answer is completely correct, accurate, and factual.
 UPLOADS_DIR = "../tests/media"
 DB_PATH = "../tests/db.json"
 CHROMADB_PATH = "../tests/chromadb"
+#TEST_FORM_PATH = "../data/pip1-claim-form.pdf"
+#TEST_FORM_PATH = "../data/aa1-interactive-claim-form.pdf"
+#TEST_FORM_PATH = "../data/FOI -18-01505 -  Blue badge application form.pdf"
 #TEST_FORM_PATH = "../data/Change_of_Address_Form_25.04.16.pdf"
-TEST_FORM_PATH = "../data/sample-form-2.pdf"
+#TEST_FORM_PATH = "../data/sample-form-2.pdf"
+TEST_FORM_PATH = "../data/sample-form-1.pdf"
 TEST_RESULTS_PATH = "../tests/results"
 TEST_EVALUATIONS_PATH = "../tests/evaluations"
 REFERENCE_FORM_ID = 1

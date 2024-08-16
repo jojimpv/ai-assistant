@@ -11,6 +11,8 @@ from langchain_core.output_parsers import CommaSeparatedListOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
+from pdfplumber.utils.pdfinternals import resolve_and_decode, resolve
+from tqdm import tqdm
 
 from aiassistant.database import get_all_qa, get_parse_stats, get_audit_record, upsert_audit_record, tb_upload_stats, \
     get_qa_doc_id_from_question_id
@@ -65,7 +67,7 @@ def parse_with_llm(form_id: int):
     upload_stat = tb_upload_stats.get(doc_id=form_id)
     file_name = upload_stat.get('file_name')
     file_path = Path(settings.UPLOADS_DIR) / file_name
-    logger.info(f'started reading pdf')
+    logger.info(f'Started reading pdf at {file_path}')
     doc = read_pdf_content(path=file_path)
     user_prompt = settings.FORM_PARSE_PROMT_PREFIX + '\n' + doc
     parser = CommaSeparatedListOutputParser()
@@ -83,10 +85,44 @@ def parse_with_llm(form_id: int):
     return response
 
 
+def parse_acro_form(form_id):
+    upload_stat = tb_upload_stats.get(doc_id=form_id)
+    file_name = upload_stat.get('file_name')
+    file_path = Path(settings.UPLOADS_DIR) / file_name
+    logger.info(f'Started reading pdf at {file_path}')
+    pdf = pdfplumber.open(file_path)
+    form_data = []
+
+    def parse_field_helper(form_data, field, prefix=None):
+        """ appends any PDF AcroForm field/value pairs in `field` to provided `form_data` list
+
+            if `field` has child fields, those will be parsed recursively.
+        """
+        resolved_field = field.resolve()
+        field_name = '.'.join(filter(lambda x: x, [prefix, resolve_and_decode(resolved_field.get("T"))]))
+        if "Kids" in resolved_field:
+            for kid_field in resolved_field["Kids"]:
+                parse_field_helper(form_data, kid_field, prefix=field_name)
+        if "T" in resolved_field or "TU" in resolved_field:
+            # "T" is a field-name, but it's sometimes absent.
+            # "TU" is the "alternate field name" and is often more human-readable
+            # your PDF may have one, the other, or both.
+            alternate_field_name = resolve_and_decode(resolved_field.get("TU")) if resolved_field.get("TU") else None
+            field_value = resolve_and_decode(resolved_field["V"]) if 'V' in resolved_field else None
+            form_data.append([field_name, alternate_field_name, field_value])
+
+    fields = resolve(resolve(pdf.doc.catalog["AcroForm"])["Fields"])
+    for field in fields:
+        parse_field_helper(form_data, field)
+    form_fields = [f'{alternate_field_name} ({field_name})' for field_name, alternate_field_name, field_value in
+                   form_data]
+    return form_fields
+
+
 def qa_with_llm(form_id: int):
     parse_stats = get_parse_stats(form_id=form_id)
     qa_stats = []
-    for parse_stat in parse_stats:
+    for parse_stat in tqdm(parse_stats, desc=f'Auto QA [{form_id}]'):
         question_id = parse_stat.doc_id
         form_field = parse_stat['field']
         question_embedding = get_embeddings(form_field)

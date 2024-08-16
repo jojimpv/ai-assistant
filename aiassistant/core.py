@@ -49,7 +49,7 @@ def read_pdf_content(path):
 
 
 def get_response_from_llm(prompt, model="mistral"):
-    logger.info(f'Requesting LLM response. Prompt length: {len(prompt)}')
+    logger.info(f'Requesting LLM({model}) response. Prompt length: {len(prompt)}')
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -68,7 +68,6 @@ def parse_with_llm(form_id: int):
     logger.info(f'started reading pdf')
     doc = read_pdf_content(path=file_path)
     user_prompt = settings.FORM_PARSE_PROMT_PREFIX + '\n' + doc
-    logger.info(f'started parsing pdf')
     parser = CommaSeparatedListOutputParser()
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n",
@@ -77,8 +76,9 @@ def parse_with_llm(form_id: int):
     )
     model = model_parse
     chain = prompt | model | parser
+    logger.info(f'Requesting LLM({model}) response parsing pdf')
     response = chain.invoke({"query": user_prompt})
-    logger.info(f'List of form fields: {response}')
+    logger.info(f'Response received from LLM({model}). List of form fields: {response}')
     logger.info(f'completed parsing pdf')
     return response
 

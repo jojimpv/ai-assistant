@@ -21,6 +21,7 @@ You are a helpful form filling helper.
 Your task is to extract form fields from the user supplied document.
 Form fields are the questions asked in the form.
 Exclude any text which looks like a disclimer and ignore signature place holders.
+IMPORTANT: The response expected is a collection of questions asked in the document, NOT the summary of the document.
 
 Document content:
 =================

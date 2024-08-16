@@ -44,7 +44,7 @@ async def process_parse_form(form_id: int):
     logger.info(f'Starting form parsing for form_id: {form_id}')
     update_audit(form_id=form_id, task=task, tags=tags)
     try:
-        response = await run.io_bound(requests.get, parse_form_url, timeout=900)
+        response = await run.io_bound(requests.get, parse_form_url, timeout=2*60*60)
         response.raise_for_status()
         form_fields = response.json()['form_fields']
         parse_form_docs = [dict(form_id=form_id, field=x) for x in form_fields]
@@ -64,7 +64,7 @@ async def process_qa_form(form_id: int):
     task, code, error_msg, tags = 'AUTO_QA', 'SUCCESS', None, f'model_qa={settings.MODEL_QA}'
     update_audit(form_id=form_id, task=task, tags=tags)
     try:
-        response = await run.io_bound(requests.get, qa_form_url, timeout=900)
+        response = await run.io_bound(requests.get, qa_form_url, timeout=10*60*60)
         response.raise_for_status()
         qa_response = response.json()
         qa_stats = qa_response['qa_stats']

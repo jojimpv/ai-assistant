@@ -1,8 +1,6 @@
 [default]
 
 OPENAI_BASE_URL = "http://localhost:11434/v1"
-#FORM_PATH = "../data/Change_of_Address_Form_25.04.16.pdf"
-#FORM_PATH = "../data/sample-form-1.pdf"
 UPLOADS_DIR = "../media"
 DB_PATH = "../db.json"
 CHROMADB_PATH = "../chromadb"
@@ -10,14 +8,8 @@ TMP_DIR_PATH = "../temp"
 FORM_STATUS_UPLOADED = "UPLOADED"
 FORM_STATUS_PARSED = "PARSED"
 FORM_STATUS_QA = "QA"
-
-#MODEL_PARSE= "phi3:medium"
 MODEL_PARSE= "mistral"
-#MODEL_PARSE= "gemma:2b"
-#MODEL_QA= "mistral"
-#MODEL_QA= "gemma:2b"
-#MODEL_QA= "qwen:4b"
-MODEL_QA= "phi3:medium"
+MODEL_QA= "qwen:4b"
 
 FORM_PARSE_PROMT_PREFIX = """
 You are a helpful form filling helper.
@@ -118,13 +110,7 @@ Score 5: The answer is completely correct, accurate, and factual.
 UPLOADS_DIR = "../tests/media"
 DB_PATH = "../tests/db.json"
 CHROMADB_PATH = "../tests/chromadb"
-#TEST_FORM_PATH = "../data/pip1-claim-form.pdf"
-#TEST_FORM_PATH = "../data/aa1-interactive-claim-form.pdf"
-#TEST_FORM_PATH = "../data/FOI -18-01505 -  Blue badge application form.pdf"
-#TEST_FORM_PATH = "../data/Change_of_Address_Form_25.04.16.pdf"
-#TEST_FORM_PATH = "../data/sample-form-2.pdf"
-TEST_FORM_PATH = "../data/sample-form-1.pdf"
-#TEST_FORM_PATH = "../data/sfe_dsa_disability_evidence_form_1920_o.pdf"
+TEST_FORM_PATH = "../data/sample-form-2.pdf"
 TEST_RESULTS_PATH = "../tests/results"
 TEST_EVALUATIONS_PATH = "../tests/evaluations"
 REFERENCE_FORM_ID = 1

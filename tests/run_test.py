@@ -12,7 +12,7 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
 from aiassistant.backend import process_uploads, process_parse_form, process_qa_form
-from aiassistant.core import collection as vectordb_collection
+from aiassistant.core import collection as vectordb_collection, save_llm_io_to_disk
 from aiassistant.core import read_pdf_content, update_audit, update_embedding
 from aiassistant.database import add_upload_stats, tb_qa_stats, tb_upload_stats, tb_parse_stats, db
 from aiassistant.log import get_logger
@@ -22,7 +22,7 @@ TEST_FORM_PATH = settings.TEST_FORM_PATH
 REFERENCE_FORM_ID = 1
 model_eval_ds = ChatOpenAI(
     model=settings.MODEL_TEST,
-    temperature=1.0,
+    temperature=0,
     base_url=settings.OPENAI_BASE_URL,
     api_key='ollama'
 )
@@ -60,7 +60,7 @@ def get_prompt_for_llm(user_demographics, gov_form_content):
 
 def get_evaluation_dataset():
     user_demographics = get_basic_user_profile()
-    gov_form_content = read_pdf_content(TEST_FORM_PATH)
+    gov_form_content = read_pdf_content(TEST_FORM_PATH)  # TODO choose read pdf or construct from AcroForm
     user_prompt = get_prompt_for_llm(user_demographics=user_demographics, gov_form_content=gov_form_content)
     parser = JsonOutputParser(pydantic_object=UserQA)
     prompt = PromptTemplate(
@@ -70,9 +70,10 @@ def get_evaluation_dataset():
     )
     model = model_eval_ds
     chain = prompt | model | parser
-    logger.info(f'Started evaluation dataset creation LLM({settings.MODEL_TEST}) call')
+    logger.info(f'Started evaluation dataset creation LLM ({settings.MODEL_TEST}) call')
     result = chain.invoke({"query": user_prompt})
-    logger.info(f'Finished evaluation dataset creation LLM({settings.MODEL_TEST}) call')
+    save_llm_io_to_disk(label='evaluation_dataset_response', response=str(result))
+    logger.info(f'Finished evaluation dataset creation LLM ({settings.MODEL_TEST}) call')
     return result
 
 

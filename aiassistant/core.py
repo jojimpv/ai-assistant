@@ -50,6 +50,15 @@ def read_pdf_content(path):
     return document
 
 
+def save_llm_io_to_disk(label, response):
+    tmp_dir = Path(settings.TMP_DIR_PATH)
+    tmp_dir.mkdir(exist_ok=True)
+    path = tmp_dir / f'{label}.txt'
+    with open(path, 'w+') as response_file:
+        response_file.write(response)
+        logger.info(f'LLM response {label} saved at {path}')
+
+
 def get_response_from_llm(prompt, model="mistral"):
     logger.info(f'Requesting LLM({model}) response. Prompt length: {len(prompt)}')
     response = client.chat.completions.create(
@@ -78,9 +87,9 @@ def parse_with_llm(form_id: int):
     )
     model = model_parse
     chain = prompt | model | parser
-    logger.info(f'Requesting LLM({model}) response parsing pdf')
+    logger.info(f'Requesting LLM ({settings.MODEL_PARSE}) response for parsing pdf')
     response = chain.invoke({"query": user_prompt})
-    logger.info(f'Response received from LLM({model}). List of form fields: {response}')
+    logger.info(f'Response received from LLM ({settings.MODEL_PARSE}). List of form fields: {response}')
     logger.info(f'completed parsing pdf')
     return response
 

@@ -194,7 +194,7 @@ class UiApp:
                             with ui.column():
                                 ui.button('User Input (Review)',
                                           on_click=lambda: self.handle_user_input(form_id=form_id),
-                                          icon='play_arrow').props('flat color=blue')
+                                          icon='edit_note').props('flat color=blue')
                                 ui.button('Preview Answers', on_click=lambda: self.handle_preview(form_id=form_id),
                                           icon='tour').props('flat color=blue')
                         ui.button('Track form process',
@@ -217,11 +217,18 @@ class UiApp:
         self.audit_records_for_form = [audit.get_formatted_audit_row(x) for x in get_all_audit(form_id=form_id)]
         audit_dialog.clear()
         with (audit_dialog, ui.card().style('width: 1200px; min-width: fit-content;')):
-            ui.table(
+            table = ui.table(
                 columns=audit.audit_columns_form,
                 rows=self.audit_records_for_form,
                 row_key='event'
             ).props('dense table-header-class="text-blue" title-class="text-green"')
+            table.add_slot('body-cell-code', '''
+                <q-td key="code" :props="props">
+                    <q-badge :color="props.value == 'STARTED' ? 'green' : 'blue'">
+                        {{ props.value }}
+                    </q-badge>
+                </q-td>
+            ''')
         audit_dialog.open()
 
     def filter_audit_records(self):

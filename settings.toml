@@ -52,6 +52,7 @@ Your task is to give answer for the question being asked.
 Answer need to be one sentense (max 100 chars).
 
 Below are the prior question-answer data that can be used to answer the question.
+DO NOT mention prior question-answer context in your response.
 
 Question-answer data:
 ====================

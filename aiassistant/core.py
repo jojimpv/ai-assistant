@@ -94,10 +94,14 @@ def parse_with_llm(form_id: int):
     return response
 
 
-def parse_acro_form(form_id):
-    upload_stat = tb_upload_stats.get(doc_id=form_id)
-    file_name = upload_stat.get('file_name')
-    file_path = Path(settings.UPLOADS_DIR) / file_name
+def parse_acro_form(form_id=None, form_path=None):
+    assert form_id or form_path
+    if form_id:
+        upload_stat = tb_upload_stats.get(doc_id=form_id)
+        file_name = upload_stat.get('file_name')
+        file_path = Path(settings.UPLOADS_DIR) / file_name
+    else:
+        file_path = form_path
     logger.info(f'Started reading pdf at {file_path}')
     pdf = pdfplumber.open(file_path)
     form_data = []

@@ -12,7 +12,7 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
 from aiassistant.backend import process_uploads, process_parse_form, process_qa_form
-from aiassistant.core import collection as vectordb_collection, save_llm_io_to_disk
+from aiassistant.core import collection as vectordb_collection, save_llm_io_to_disk, parse_acro_form
 from aiassistant.core import read_pdf_content, update_audit, update_embedding
 from aiassistant.database import add_upload_stats, tb_qa_stats, tb_upload_stats, tb_parse_stats, db
 from aiassistant.log import get_logger
@@ -60,7 +60,13 @@ def get_prompt_for_llm(user_demographics, gov_form_content):
 
 def get_evaluation_dataset():
     user_demographics = get_basic_user_profile()
-    gov_form_content = read_pdf_content(TEST_FORM_PATH)  # TODO choose read pdf or construct from AcroForm
+    try:
+        gov_form_questions = parse_acro_form(form_path=TEST_FORM_PATH)
+        gov_form_content = '\n'.join(gov_form_questions)
+        logger.info(f'Form content created using Acro form parser')
+    except KeyError:
+        logger.info(f'Extracting text from form pdf')
+        gov_form_content = read_pdf_content(TEST_FORM_PATH)
     user_prompt = get_prompt_for_llm(user_demographics=user_demographics, gov_form_content=gov_form_content)
     parser = JsonOutputParser(pydantic_object=UserQA)
     prompt = PromptTemplate(

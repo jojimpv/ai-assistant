@@ -14,6 +14,7 @@ def parse_form(form_id: int):
     response = []
     try:
         response = parse_acro_form(form_id=form_id)
+        logger.info(f'Form parsed using Acro form parser')
     except KeyError:
         pass
     if not response:

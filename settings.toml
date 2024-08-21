@@ -8,6 +8,9 @@ TMP_DIR_PATH = "../temp"
 FORM_STATUS_UPLOADED = "UPLOADED"
 FORM_STATUS_PARSED = "PARSED"
 FORM_STATUS_QA = "QA"
+SIMILARITY_THRESHOLD = 0.40
+QUERY_EMBED_RESULT_LIMIT = 5
+MODEL_EMBED = "mxbai-embed-large"
 MODEL_PARSE= "mistral"
 MODEL_QA= "qwen:4b"
 
@@ -52,9 +55,25 @@ $qa_docs
 
 """
 
+
+[testing]
+UI_PORT = 8090
+UPLOADS_DIR = "../tests/media"
+DB_PATH = "../tests/db.json"
+CHROMADB_PATH = "../tests/chromadb"
+TEST_FORM_PATH = "../data/sample-form-2.pdf"
+TEST_RESULTS_PATH = "../tests/results"
+TEST_EVALUATIONS_PATH = "../tests/evaluations"
+TEST_REPORTS_PATH = "../tests/reports"
+REFERENCE_FORM_ID = 1
+MODEL_TEST = "mistral"
+MODEL_EVAL = "mistral"
+
 INTERVIEWER_PROMPT = """
 You are an interviewer asking questions to a user by reffering to a government form (having questions).
-The questions asked shouldn't be exactly same as what is given in the government form, but similar to it.
+The questions asked shouldn't be exactly same as what is given in the government form, but VERY similar to it.
+No question mark at the end of the question please.
+Be straight on the questions without much prefix or suffix after the questions in the government form.
 Please create the questions and plausible answers for each question.
 The length of answers need to be limited to 100 words.
 
@@ -106,14 +125,19 @@ Score 5: The answer is completely correct, accurate, and factual.
 
 ###Feedback:"""
 
-[testing]
-UI_PORT = 8090
-UPLOADS_DIR = "../tests/media"
-DB_PATH = "../tests/db.json"
-CHROMADB_PATH = "../tests/chromadb"
-TEST_FORM_PATH = "../data/sample-form-2.pdf"
-TEST_RESULTS_PATH = "../tests/results"
-TEST_EVALUATIONS_PATH = "../tests/evaluations"
-REFERENCE_FORM_ID = 1
-MODEL_TEST = "mistral"
-MODEL_EVAL = "mistral"
+REPORT_INDEX_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Evaluation Score Report</title>
+</head>
+<body>
+<h2>Score graph for different judge models</h2>
+<img src="score_model_judge.png" alt="model_judge.png graph"/>
+<br/>
+<h2>Score graph for different QA models</h2>
+<img src="score_model_qa.png" alt="model_qa.png graph"/>
+</body>
+</html>
+"""

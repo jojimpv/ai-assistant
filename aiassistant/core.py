@@ -186,7 +186,7 @@ def create_docs_embeddings():
 
 
 def get_embeddings(doc):
-    response = ollama.embeddings(model="mxbai-embed-large", prompt=doc)
+    response = ollama.embeddings(model=settings.MODEL_EMBED, prompt=doc)
     embedding = response["embedding"]
     return embedding
 
@@ -208,10 +208,11 @@ def update_embedding(form_id: int, question_id: int, answer: str):
     logger.info(f'Updated embedding for question_id: {question_id}')
 
 
-def query_embeddings(embedding, similarity_threshold: float = 0.25):
+def query_embeddings(embedding, similarity_threshold: float = None):
+    similarity_threshold = settings.SIMILARITY_THRESHOLD if not similarity_threshold else similarity_threshold
     results = collection.query(
         query_embeddings=[embedding],
-        n_results=2
+        n_results=settings.QUERY_EMBED_RESULT_LIMIT
     )
     documents = results['documents'][0]
     distances = results['distances'][0]

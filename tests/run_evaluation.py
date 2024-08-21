@@ -89,7 +89,17 @@ def get_form_meta(path):
         form_ids.remove(str(settings.REFERENCE_FORM_ID))
         form_id = int(form_ids[0])
         form_name = b.upload_stats[str(form_id)]['name']
-    return Box(dict(form_id=form_id, form_name=form_name))
+        model_parse_tag = [x for x in b.audit.values() if x.task == 'PARSE'][0].tags
+        model_parse = slugify(model_parse_tag.replace('model_parse=', ''))
+        model_qa_tag = [x for x in b.audit.values() if x.task == 'AUTO_QA'][0].tags
+        model_qa = slugify(model_qa_tag.replace('model_qa=', ''))
+    form_meta = Box(dict(
+        form_id=form_id,
+        form_name=form_name,
+        model_qa=model_qa,
+        model_parse=model_parse
+    ))
+    return form_meta
 
 
 def replace_test_db_file(path):
@@ -140,7 +150,8 @@ async def main(result_form_id=None):
     for db_backup in tqdm(results_db_backups, desc='Processing DB backup'):
         try:
             form_meta = get_form_meta(path=db_backup)
-            logger.info(f'Processing score calculation for result backup file at: {db_backup}')
+            logger.info(f'Processing score calculation for result backup file at: {db_backup} . '
+                        f'Form name: {form_meta.form_name}')
             replace_test_db_file(path=db_backup)
             score_info = check_score(ref_form_id=1, form_id=form_meta.form_id)
             save_score(form_meta, score_info)

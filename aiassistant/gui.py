@@ -314,4 +314,4 @@ with main_header:
 logger.info(f'API module loaded from {api}')
 logger.info(f'Audit module loaded from {audit}')
 
-ui.run(reload=False, show=False, title='AI Assistant', favicon='📝')
+ui.run(port=settings.UI_PORT, reload=False, show=False, title='AI Assistant', favicon='📝')

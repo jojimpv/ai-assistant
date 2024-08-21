@@ -39,7 +39,7 @@ def process_uploads(name, file_content):
 
 
 async def process_parse_form(form_id: int):
-    parse_form_url = f'http://localhost:8080/api/parse_form/{form_id}'
+    parse_form_url = f'http://localhost:{settings.UI_PORT}/api/parse_form/{form_id}'
     task, code, error_msg, tags = 'PARSE', 'SUCCESS', None, f'model_parse={settings.MODEL_PARSE}'
     logger.info(f'Starting form parsing for form_id: {form_id}')
     update_audit(form_id=form_id, task=task, tags=tags)
@@ -59,7 +59,7 @@ async def process_parse_form(form_id: int):
 
 
 async def process_qa_form(form_id: int):
-    qa_form_url = f'http://localhost:8080/api/qa_form/{form_id}'
+    qa_form_url = f'http://localhost:{settings.UI_PORT}/api/qa_form/{form_id}'
     logger.info(f'Starting form QA for form_id: {form_id}')
     task, code, error_msg, tags = 'AUTO_QA', 'SUCCESS', None, f'model_qa={settings.MODEL_QA}'
     update_audit(form_id=form_id, task=task, tags=tags)

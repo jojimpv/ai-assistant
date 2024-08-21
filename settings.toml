@@ -1,5 +1,5 @@
 [default]
-
+UI_PORT = 8080
 OPENAI_BASE_URL = "http://localhost:11434/v1"
 UPLOADS_DIR = "../media"
 DB_PATH = "../db.json"
@@ -107,6 +107,7 @@ Score 5: The answer is completely correct, accurate, and factual.
 ###Feedback:"""
 
 [testing]
+UI_PORT = 8090
 UPLOADS_DIR = "../tests/media"
 DB_PATH = "../tests/db.json"
 CHROMADB_PATH = "../tests/chromadb"

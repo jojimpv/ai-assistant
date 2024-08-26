@@ -4,6 +4,8 @@ from glob import glob
 from pathlib import Path
 
 import matplotlib.colors as mcolors
+import numpy as np
+import pandas
 import pandas as pd
 from box import Box
 from dynaconf import settings
@@ -26,6 +28,8 @@ def save_scores(df, report_dir, by='model_qa'):
     df32 = df31.drop([by, 'form_name'], axis=1)
     form_model_list = df32['form_model'].unique()
     fig, ax = plt.subplots()
+    mean_sd_data = []
+    max_x = 5
     for index, form_model in enumerate(form_model_list):
         df = df32.query(f'form_model == "{form_model}"')
         df40 = df['score_int'].expanding().mean().reset_index()
@@ -39,13 +43,22 @@ def save_scores(df, report_dir, by='model_qa'):
                     xy=(X[-1], Y[-1]),
                     xytext=(X[-1] + 1, Y[-1]),
                     ),
+        mean_sd_data.append(dict(
+            form_model=form_model,
+            mean=np.mean(Y),
+            sd=np.std(Y)
+        ))
+        max_x = max(max_x, max(X))
+    # ax.set_xticks(range(max_x+5))
     ax.set_xlabel('Number of questions')
     ax.set_ylabel('Mean score')
     ax.legend()
+    # plt.xticks(rotation=90)
     img_path = report_dir / f'score_{by}.png'
     plt.savefig(img_path, bbox_inches='tight')
     logger.info(f'Saved report part at {img_path}')
     # plt.show()
+    return mean_sd_data
 
 
 def get_score_df():
@@ -87,21 +100,32 @@ def setup():
     return report_dir
 
 
-def create_index_html(report_dir):
+def create_index_html(report_dir, model_qa_mean_sd_data, model_judge_mean_sd_data):
     index_html_path = report_dir / 'index.html'
-    index_html_path.write_text(settings.REPORT_INDEX_TEMPLATE)
+    model_qa_df = pandas.DataFrame.from_records(model_qa_mean_sd_data)
+    model_qa_df.index = model_qa_df.index + 1
+    model_judge_df = pandas.DataFrame.from_records(model_judge_mean_sd_data)
+    model_judge_df.index = model_judge_df.index + 1
+    timestamp = report_dir.stem.replace('report_','')
+    report_html = settings.REPORT_INDEX_TEMPLATE.format(
+        timestamp=str(timestamp),
+        model_qa_df=model_qa_df.to_html(),
+        model_judge_df=model_judge_df.to_html()
+    )
+    index_html_path.write_text(report_html)
     logger.info(f'Saved report index file at: {index_html_path}')
-    # with open(index_html_path, 'w+') as index_html_file:
-    #     index_html_file.write(settings.REPORT_INDEX_TEMPLATE)
 
 
 def main():
     report_dir = setup()
     df3 = get_score_df()
     # print(df3.to_markdown())
-    save_scores(df=df3, report_dir=report_dir, by='model_qa')
-    save_scores(df=df3, report_dir=report_dir, by='model_judge')
-    create_index_html(report_dir=report_dir)
+    model_qa_mean_sd_data = save_scores(df=df3, report_dir=report_dir, by='model_qa')
+    model_judge_mean_sd_data = save_scores(df=df3, report_dir=report_dir, by='model_judge')
+    create_index_html(report_dir=report_dir,
+                      model_qa_mean_sd_data=model_qa_mean_sd_data,
+                      model_judge_mean_sd_data=model_judge_mean_sd_data
+                      )
 
 
 if __name__ == '__main__':

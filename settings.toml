@@ -130,14 +130,18 @@ REPORT_INDEX_TEMPLATE = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Evaluation Score Report</title>
+    <title>Evaluation Score Report - {timestamp}</title>
 </head>
 <body>
 <h2>Score graph for different judge models</h2>
 <img src="score_model_judge.png" alt="model_judge.png graph"/>
 <br/>
+{model_qa_df}
+<br/><br/>
 <h2>Score graph for different QA models</h2>
 <img src="score_model_qa.png" alt="model_qa.png graph"/>
+<br/>
+{model_judge_df}
 </body>
 </html>
 """

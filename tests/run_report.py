@@ -31,8 +31,11 @@ def save_scores(df, report_dir, by='model_qa'):
     mean_sd_data = []
     max_x = 5
     for index, form_model in enumerate(form_model_list):
-        df = df32.query(f'form_model == "{form_model}"')
-        df40 = df['score_int'].expanding().mean().reset_index()
+        df33 = df32.query(f'form_model == "{form_model}"')
+        scores = df33['score_int'].to_list()
+        mean_score = np.mean(scores)
+        sd_score = np.std(scores)
+        df40 = df33['score_int'].expanding().mean().reset_index()
         Y = df40['score_int'].to_list()
         X = list(range(1, len(Y) + 1))
         ax.plot(X, Y, marker='.',
@@ -45,8 +48,8 @@ def save_scores(df, report_dir, by='model_qa'):
                     ),
         mean_sd_data.append(dict(
             form_model=form_model,
-            mean=np.mean(Y),
-            sd=np.std(Y)
+            mean=mean_score,
+            sd=sd_score
         ))
         max_x = max(max_x, max(X))
     # ax.set_xticks(range(max_x+5))
@@ -120,6 +123,9 @@ def main():
     report_dir = setup()
     df3 = get_score_df()
     # print(df3.to_markdown())
+    df_csv_path = report_dir / f'score_df.csv'
+    df3.to_csv(df_csv_path)
+    logger.info(f'Saved source dataframe for the report at: {df_csv_path}')
     model_qa_mean_sd_data = save_scores(df=df3, report_dir=report_dir, by='model_qa')
     model_judge_mean_sd_data = save_scores(df=df3, report_dir=report_dir, by='model_judge')
     create_index_html(report_dir=report_dir,

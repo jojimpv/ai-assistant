@@ -19,10 +19,7 @@ colours = list(mcolors.TABLEAU_COLORS.keys())
 
 
 def save_scores(df, report_dir, by='model_qa'):
-    df10 = df.query('score != "0"')
-    df10['score_int'] = pd.to_numeric(df10['score'], errors='coerce')
-    df11 = df10.dropna()
-    df12 = df11[[by, 'form_name', 'form_id', 'question', 'score_int']]
+    df12 = df[[by, 'form_name', 'form_id', 'question', 'score_int']]
     df31 = df12[[by, 'form_name', 'score_int']]
     df31['form_model'] = df31['form_name'] + ':' + df31[by]
     df32 = df31.drop([by, 'form_name'], axis=1)
@@ -126,8 +123,14 @@ def main():
     df_csv_path = report_dir / f'score_df.csv'
     df3.to_csv(df_csv_path)
     logger.info(f'Saved source dataframe for the report at: {df_csv_path}')
-    model_qa_mean_sd_data = save_scores(df=df3, report_dir=report_dir, by='model_qa')
-    model_judge_mean_sd_data = save_scores(df=df3, report_dir=report_dir, by='model_judge')
+    df4 = df3.query('score != "0"')
+    df4['score_int'] = pd.to_numeric(df4['score'], errors='coerce')
+    df5 = df4.dropna()
+    filtered_df_csv_path = report_dir / f'filtered_score_df.csv'
+    df5.to_csv(filtered_df_csv_path)
+    logger.info(f'Saved filtered source dataframe for the report at: {filtered_df_csv_path}')
+    model_qa_mean_sd_data = save_scores(df=df5, report_dir=report_dir, by='model_qa')
+    model_judge_mean_sd_data = save_scores(df=df5, report_dir=report_dir, by='model_judge')
     create_index_html(report_dir=report_dir,
                       model_qa_mean_sd_data=model_qa_mean_sd_data,
                       model_judge_mean_sd_data=model_judge_mean_sd_data

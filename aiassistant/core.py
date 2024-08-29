@@ -76,10 +76,14 @@ def get_response_from_llm(prompt, model="mistral"):
     return response_content
 
 
-def parse_with_llm(form_id: int):
-    upload_stat = tb_upload_stats.get(doc_id=form_id)
-    file_name = upload_stat.get('file_name')
-    file_path = Path(settings.UPLOADS_DIR) / file_name
+def parse_with_llm(form_id: int = None, form_path=None):
+    if not form_path:
+        assert form_id
+        upload_stat = tb_upload_stats.get(doc_id=form_id)
+        file_name = upload_stat.get('file_name')
+        file_path = Path(settings.UPLOADS_DIR) / file_name
+    else:
+        file_path = form_path
     logger.info(f'Started reading pdf at {file_path}')
     doc = read_pdf_content(path=file_path)
     user_prompt = settings.FORM_PARSE_PROMT_PREFIX + '\n' + doc

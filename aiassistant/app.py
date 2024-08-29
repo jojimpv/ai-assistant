@@ -2,12 +2,13 @@
 This script contains a console application which demonstrate form parsing and QA using LLM.
 It can be executed to check response from LLM for different forms within a terminal window.
 """
-import ast
+from pathlib import Path
+
 from dynaconf import settings
 from openai import OpenAI
 
 from aiassistant.log import get_logger
-from core import read_pdf_content, get_response_from_llm
+from core import get_response_from_llm, parse_with_llm
 
 logger = get_logger(__name__)
 
@@ -19,10 +20,9 @@ client = OpenAI(
 
 def main():
     logger.info(f'Started AI Assistant')
-    doc = read_pdf_content(path=settings.FORM_PATH)
-    parse_prompt = settings.FORM_PARSE_PROMT_PREFIX + '\n' + doc
-    response = get_response_from_llm(prompt=parse_prompt)
-    form_fields = ast.literal_eval(response)
+    form_path = Path(settings.FORM_PATH)
+    response = parse_with_llm(form_path=form_path)
+    form_fields = response
     logger.info(f'List of form fields: {form_fields}')
     logger.info('Started QA stage')
     for form_field in form_fields:

@@ -1,4 +1,9 @@
-import asyncio
+"""
+This script starts the Web portal in local machine.
+The port number can be configured using application configuration settings.UI_PORT.
+It contains controllers or handlers for button clicks in the GUI.
+Audit information is also registered from these handlers.
+"""
 import asyncio
 import math
 

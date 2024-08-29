@@ -1,3 +1,8 @@
+"""
+This script manages logging of the application.
+The logging has console as well as file handlers.
+The file handler logs messages into log file named “aiassistant.log”.
+"""
 import logging
 import os
 import time

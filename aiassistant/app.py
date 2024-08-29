@@ -1,5 +1,8 @@
+"""
+This script contains a console application which demonstrate form parsing and QA using LLM.
+It can be executed to check response from LLM for different forms within a terminal window.
+"""
 import ast
-
 from dynaconf import settings
 from openai import OpenAI
 

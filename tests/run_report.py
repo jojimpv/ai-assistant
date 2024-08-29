@@ -1,3 +1,7 @@
+"""
+This script creates the score graphs and metrics which shows performance of AI assistant tool
+on different forms and when different LLM are used in the Auto QA stage.
+"""
 import json
 import time
 from glob import glob

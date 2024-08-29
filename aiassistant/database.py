@@ -1,5 +1,6 @@
 """
-Module to host TinyDB operations
+Module to host TinyDB operations.
+The database operation like insert, update and query to different DB tables are grouped under this script.
 """
 
 from dynaconf import settings

@@ -1,3 +1,7 @@
+"""
+This script runs evaluations on the output from “run_test.py” to judge whether the output is factual.
+It gives score to the question-answer pair from 0 to 5.
+"""
 import asyncio
 import json
 import shutil

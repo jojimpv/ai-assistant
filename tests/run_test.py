@@ -1,3 +1,8 @@
+"""
+This script test one form at a time using the form path configured in “settings.TEST_FORM_PATH”.
+The GUI need to be started before execution of this script as the API  service start along with it.
+The GUI can be started using “gui.py” script.
+"""
 import asyncio
 import shutil
 from collections import namedtuple

@@ -1,5 +1,6 @@
 """
-Module to host FastAPI routes
+This script holds the URL routing for API service started along with GUI portal.
+The API is served via Python package FastAPI.
 """
 from nicegui import app
 

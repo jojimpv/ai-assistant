@@ -1,3 +1,7 @@
+"""
+This script holds the UI route "/audit" which show the audit information
+related to form processing background jobs.
+"""
 import datetime
 import time
 

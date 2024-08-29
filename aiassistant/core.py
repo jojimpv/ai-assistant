@@ -1,3 +1,7 @@
+"""
+This script has a pool of methods used for interaction with LLM and ChromaDB.
+The LLM cli-ent and ChromaDB client is initialized here.
+"""
 import json
 import time
 from pathlib import Path

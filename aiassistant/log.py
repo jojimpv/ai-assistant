@@ -28,18 +28,35 @@ pdfminer.setLevel(logging.INFO)
 
 
 class CustomLogger(logging.LoggerAdapter):
+    """
+    Custom logger to add duration between previous and current log message
+    """
     def process(self, msg, kwargs):
         time_str = time_check()['time']
         return '%s %s' % (msg, time_str), kwargs
 
 
-def get_logger(name):
+def get_logger(name: str):
+    """Get logger with given name.
+
+    Args:
+        name: Name of the logger
+
+    Returns:
+        Logger with given name
+
+    """
     logger = logging.getLogger(name=name)
     logger_with_duration = CustomLogger(logger)
     return logger_with_duration
 
 
-def time_check():
+def time_check() -> dict[str, str]:
+    """Get formatted time duration between last log message and current time.
+
+    Returns:
+        Dict with time duration
+    """
     def convert_to_hh_mm_ss(seconds):
         mm, ss = divmod(seconds, 60)
         hh, mm = divmod(mm, 60)

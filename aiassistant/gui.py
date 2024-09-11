@@ -23,6 +23,11 @@ media_dir = settings.UPLOADS_DIR
 
 
 class UiApp:
+    """
+    UI application instance to hold current state of UI like the form being presented in user review
+    or preview functionalities.
+    """
+
     def __init__(self):
         self.add_historic_forms()
         self.current_form = None
@@ -90,7 +95,16 @@ class UiApp:
         self.update_question_index()
         user_input_dialog.open()
 
-    def handle_preview(self, form_id):
+    def handle_preview(self, form_id: int):
+        """Display `preview_dialog` container with current form QA data.
+
+        Args:
+            form_id: Form ID
+
+        Returns:
+            None
+
+        """
         self.form_preview_data = get_combined_qa(form_id=form_id)
         upload_stat = get_upload_stats(form_id=form_id)
         title = f'{form_id} | {upload_stat.get("name")}'
@@ -112,7 +126,7 @@ class UiApp:
                         'w-full')
         preview_dialog.open()
 
-    def update_question_index(self, by=0):
+    def update_question_index(self, by: int = 0):
         new_question_index = self.current_question_index + by if by else 0
         # if new_question_index
         self.current_question_index = new_question_index
@@ -126,18 +140,42 @@ class UiApp:
         self.current_answer_user = self.current_answer_auto
 
     def update_user_answer(self, answer: str):
+        """Update user given answer to persistent as well as vector DB.
+
+        Args:
+            answer: Answer
+
+        Returns:
+            None
+
+        """
         if self.current_answer_user.strip() != '' and self.current_answer_user.strip() != self.current_answer_auto.strip():
             save_user_answer(question_id=self.current_question_id, answer=answer)
             update_embedding(form_id=self.current_form, question_id=self.current_question_id, answer=answer)
             ui.notify('Corrections saved')
 
     def add_historic_forms(self):
+        """Add all form stats to UI container named `forms_container`
+
+        Returns:
+            None
+
+        """
         # logger.info(f'In add_historic_forms')
         forms_container.clear()
         for upload_stat in sorted(tb_upload_stats.all(), key=lambda rec: rec.doc_id, reverse=True):
             self.add_form_to_container(upload_stat.doc_id)
 
-    def add_form_to_container(self, form_id):
+    def add_form_to_container(self, form_id: int):
+        """Add individual form stats to UI container named `forms_container`
+
+        Args:
+            form_id: Form ID
+
+        Returns:
+            None
+
+        """
         # logger.info(f'In add_form_to_container with form_id: {form_id}')
         upload_stat = get_upload_stats(form_id=form_id)
         form_status = upload_stat.get('status')
@@ -218,7 +256,16 @@ class UiApp:
                     with ui.tab_panel(qa_tab_user):
                         ui.table(columns=qa_stat_columns_user, rows=qa_stat_rows, row_key='field_name')
 
-    def load_audit_records(self, form_id):
+    def load_audit_records(self, form_id: int):
+        """Pull audit records from audit table to `self.audit_records_for_form`
+
+        Args:
+            form_id: Form ID
+
+        Returns:
+            None
+
+        """
         self.audit_records_for_form = [audit.get_formatted_audit_row(x) for x in get_all_audit(form_id=form_id)]
         audit_dialog.clear()
         with (audit_dialog, ui.card().style('width: 1200px; min-width: fit-content;')):

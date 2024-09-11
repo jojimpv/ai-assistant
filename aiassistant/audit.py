@@ -34,6 +34,15 @@ audit_columns = [
 
 
 def get_formatted_audit_row(x):
+    """Format audit record so that it's suitable display purpose.
+
+    Args:
+        x: Audit record
+
+    Returns:
+        Formatted audit record
+
+    """
     rec_form_id = x.get('form_id')
     start_time = x.get('start_time')
     end_time = x.get('end_time')
@@ -58,6 +67,12 @@ def get_formatted_audit_row(x):
 
 @ui.page('/audit')
 def load_audit_page():
+    """FastAPI route to display all audit records in web page.
+
+    Returns:
+        None
+
+    """
     audit_records = get_all_audit()
     current_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     audit_rows = []

@@ -40,7 +40,15 @@ vector_db_client = chromadb.PersistentClient(path=settings.CHROMADB_PATH)
 collection = vector_db_client.get_or_create_collection(name="docs", metadata={"hnsw:space": "cosine"})
 
 
-def read_pdf_content(path):
+def read_pdf_content(path) -> str:
+    """Extract text content from PDF document.
+
+    Args:
+        path: PDF file path
+
+    Returns:
+        Text from the PDF document
+    """
     document = ""
     count = 0
     logger.info(f'Reading document at: {path}')
@@ -54,7 +62,17 @@ def read_pdf_content(path):
     return document
 
 
-def save_llm_io_to_disk(label, response):
+def save_llm_io_to_disk(label: str, response: str) -> None:
+    """Save a text to disk in `settings.TMP_DIR_PATH` directory.
+
+    Args:
+        label: Prefix for the file name to be created
+        response: Text input
+
+    Returns:
+        None
+
+    """
     tmp_dir = Path(settings.TMP_DIR_PATH)
     tmp_dir.mkdir(exist_ok=True)
     path = tmp_dir / f'{label}.txt'
@@ -63,7 +81,16 @@ def save_llm_io_to_disk(label, response):
         logger.info(f'LLM response {label} saved at {path}')
 
 
-def get_response_from_llm(prompt, model="mistral"):
+def get_response_from_llm(prompt: str, model: str = "mistral"):
+    """Get LLM response for the given prompt.
+
+    Args:
+        prompt: Prompt
+        model: Name of the OLLAMA model to be used
+
+    Returns: Response text from LLM
+
+    """
     logger.info(f'Requesting LLM({model}) response. Prompt length: {len(prompt)}')
     response = client.chat.completions.create(
         model=model,
@@ -76,7 +103,17 @@ def get_response_from_llm(prompt, model="mistral"):
     return response_content
 
 
-def parse_with_llm(form_id: int = None, form_path=None):
+def parse_with_llm(form_id: int = None, form_path=None) -> list[str]:
+    """Parse the form content for the given form_id or path.
+
+    Args:
+        form_id: Form ID
+        form_path: Form path
+
+    Returns:
+        List of form fields(questions) parsed from the form content
+
+    """
     if not form_path:
         assert form_id
         upload_stat = tb_upload_stats.get(doc_id=form_id)
@@ -102,7 +139,16 @@ def parse_with_llm(form_id: int = None, form_path=None):
     return response
 
 
-def parse_acro_form(form_id=None, form_path=None):
+def parse_acro_form(form_id=None, form_path=None) -> list[str]:
+    """Extract form fields from editable PDF file using form values.
+
+    Args:
+        form_id: Form ID
+        form_path: Form path
+
+    Returns: List of form fields(questions) parsed from the form content
+
+    """
     assert form_id or form_path
     if form_id:
         upload_stat = tb_upload_stats.get(doc_id=form_id)
@@ -114,6 +160,8 @@ def parse_acro_form(form_id=None, form_path=None):
     pdf = pdfplumber.open(file_path)
     form_data = []
 
+    # The function `parse_field_helper` is copied from pdfplumber documentation at:
+    # https://github.com/jsvine/pdfplumber?tab=readme-ov-file#extracting-form-values
     def parse_field_helper(form_data, field, prefix=None):
         """ appends any PDF AcroForm field/value pairs in `field` to provided `form_data` list
 
@@ -140,7 +188,16 @@ def parse_acro_form(form_id=None, form_path=None):
     return form_fields
 
 
-def qa_with_llm(form_id: int):
+def qa_with_llm(form_id: int) -> list[dict[str, str]]:
+    """Get list of question answer pair using LLM calls for the given form_id.
+
+    Args:
+        form_id: Form ID
+
+    Returns:
+        List of question answer pair
+
+    """
     parse_stats = get_parse_stats(form_id=form_id)
     qa_stats = []
     for parse_stat in tqdm(parse_stats, desc=f'Auto QA [{form_id}]'):
@@ -164,7 +221,13 @@ def qa_with_llm(form_id: int):
     return qa_stats
 
 
-def create_docs_embeddings():
+def create_docs_embeddings() -> None:
+    """Initialize vector DB collection with question-answer pair from persistent DB.
+
+    Returns:
+        None
+
+    """
     logger.info(f'Initializing QA embeddings')
     task_id = str(int(time.time()))
     update_audit(event='embeddings_init', task=task_id)
@@ -193,13 +256,32 @@ def create_docs_embeddings():
     update_audit(event='embeddings_init', task=task_id)
 
 
-def get_embeddings(doc):
+def get_embeddings(doc: str) -> list[float]:
+    """Get embedding for the text supplied using embedding model `settings.MODEL_EMBED`.
+
+    Args:
+        doc: Text to be embedded
+
+    Returns: Vector embedding
+
+    """
     response = ollama.embeddings(model=settings.MODEL_EMBED, prompt=doc)
     embedding = response["embedding"]
     return embedding
 
 
-def update_embedding(form_id: int, question_id: int, answer: str):
+def update_embedding(form_id: int, question_id: int, answer: str) -> None:
+    """Upsert vector DB for the given form_id and question_id.
+
+    Args:
+        form_id: Form ID
+        question_id: Question ID
+        answer: Answer to be updated
+
+    Returns:
+        None
+
+    """
     question = get_parse_stats(form_id=form_id, parse_id=question_id)['field']
     doc_id = get_qa_doc_id_from_question_id(question_id=question_id)
     doc = dict(
@@ -216,7 +298,17 @@ def update_embedding(form_id: int, question_id: int, answer: str):
     logger.info(f'Updated embedding for question_id: {question_id}')
 
 
-def query_embeddings(embedding, similarity_threshold: float = None):
+def query_embeddings(embedding: list[float], similarity_threshold: float = None) -> dict:
+    """Query vector DB for the given embedding.
+
+    Args:
+        embedding: Embedding of the text to be searched
+        similarity_threshold: Similarity threshold to limit result
+
+    Returns:
+        Dictionary with filtered documents matching the given embedding
+
+    """
     similarity_threshold = settings.SIMILARITY_THRESHOLD if not similarity_threshold else similarity_threshold
     results = collection.query(
         query_embeddings=[embedding],
@@ -233,7 +325,22 @@ def query_embeddings(embedding, similarity_threshold: float = None):
     return result_dict
 
 
-def update_audit(event='form_process', form_id=None, task=None, sub_task=None, code='SUCCESS', error_msg=None, tags=''):
+def update_audit(event: str = 'form_process', form_id: int = None, task: str = None, sub_task: str = None,
+                 code: str = 'SUCCESS', error_msg: str = None, tags: str = ''):
+    """Update audit record matching the given (event, form_id, task, sub_task) combination.
+
+    Args:
+        event:
+        form_id:
+        task:
+        sub_task:
+        code:
+        error_msg:
+        tags:
+
+    Returns:
+
+    """
     audit_record = get_audit_record(event=event, form_id=form_id, task=task, sub_task=sub_task)
     if audit_record:
         doc_id = audit_record.doc_id

@@ -29,7 +29,17 @@ model_eval_judge = ChatOpenAI(
 logger = get_logger(__name__)
 
 
-def check_score(ref_form_id, form_id):
+def check_score(ref_form_id, form_id) -> list[dict]:
+    """Evaluate score for given form_id's QA in the context of ref_form_id QA.
+
+    Args:
+        ref_form_id: Reference form ID
+        form_id: Form ID
+
+    Returns:
+        List of score dicts
+
+    """
     qa_ref = get_combined_qa(form_id=ref_form_id)
     qa_test = get_combined_qa(form_id=form_id)
 
@@ -68,7 +78,16 @@ def check_score(ref_form_id, form_id):
     return scores
 
 
-def get_results_db_backups(result_form_id=None):
+def get_results_db_backups(result_form_id=None) -> tuple[list, int]:
+    """Get filtered list of unprocessed DB backup file path and number of already processed file count.
+
+    Args:
+        result_form_id: Form ID
+
+    Returns:
+        List of unprocessed DB backup file path and number of already processed file count
+
+    """
     if result_form_id:
         return glob(f'{settings.TEST_RESULTS_PATH}/*{result_form_id}.json'), 0
     all_result_backups = glob(f'{settings.TEST_RESULTS_PATH}/*.json')
@@ -86,6 +105,15 @@ def get_results_db_backups(result_form_id=None):
 
 
 def get_form_meta(path):
+    """Get form metadata as dict with keys form_id, form_name, model_qa and model_parse.
+
+    Args:
+        path: DB file path
+
+    Returns:
+        Dict with keys form_id, form_name, model_qa and model_parse
+
+    """
     with open(path, 'r') as db_backup_file:
         d = json.load(db_backup_file)
         b = Box(d)
@@ -115,7 +143,17 @@ def setup():
     Path(settings.TEST_EVALUATIONS_PATH).mkdir(exist_ok=True)
 
 
-def save_score(form_meta, score_info):
+def save_score(form_meta: Box, score_info: list[dict[str, str]]) -> None:
+    """Save evaluation result file with form metadata and scores to disk
+
+    Args:
+        form_meta: Form metadata
+        score_info: List of score records
+
+    Returns:
+        None
+
+    """
     form_id = form_meta.form_id
     evaluation_score_path = Path(settings.TEST_EVALUATIONS_PATH) / f'eval_{form_id}.json'
     scores = dict()
@@ -136,6 +174,15 @@ def save_score(form_meta, score_info):
 
 
 def check_eval_key_exists(form_id):
+    """Check evaluation result file exists and evaluation result for the current judge model exists in it or not.
+
+    Args:
+        form_id: Form ID
+
+    Returns:
+        True if evaluation result for the current judge model exists in evaluation result file.
+
+    """
     score_key = f'score_{slugify(settings.MODEL_EVAL)}'
     evaluation_score_path = Path(settings.TEST_EVALUATIONS_PATH) / f'eval_{form_id}.json'
     if evaluation_score_path.exists() and evaluation_score_path.is_file():

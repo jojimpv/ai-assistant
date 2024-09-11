@@ -22,7 +22,19 @@ logger = get_logger(__name__)
 colours = list(mcolors.TABLEAU_COLORS.keys())
 
 
-def save_scores(df, report_dir, by='model_qa'):
+def save_scores(df, report_dir, by='model_qa') -> list[dict]:
+    """Save score-model graph for judge model or QA model and calculate mean and standard deviation
+    for each form-model combination.
+
+    Args:
+        df: Dataframe with question, answer, score and form metadata
+        report_dir: Report directory
+        by: model_qa or model_judge
+
+    Returns:
+        list of dicts with form, model, mean score and standard deviation of score for each form-model combination.
+
+    """
     df12 = df[[by, 'form_name', 'form_id', 'question', 'score_int']]
     df31 = df12[[by, 'form_name', 'score_int']]
     df31['form_model'] = df31['form_name'] + ':' + df31[by]
@@ -65,7 +77,13 @@ def save_scores(df, report_dir, by='model_qa'):
     return mean_sd_data
 
 
-def get_score_df():
+def get_score_df() -> pd.DataFrame:
+    """Create a single pandas dataframe by collecting evaluation result json files
+
+    Returns:
+         Pandas dataframe with question, answer, score and form metadata info
+
+    """
     df = pd.DataFrame()
     # iterate over the evaluations dir for json
     for eval_json in tqdm(glob(f'{settings.TEST_EVALUATIONS_PATH}/*.json'), desc='Processing evaluation jsons'):
@@ -96,6 +114,12 @@ def get_score_df():
 
 
 def setup():
+    """Create report directory for the current run and return the directory path.
+
+    Returns:
+        Return the report directory path
+
+    """
     Path(settings.TEST_REPORTS_PATH).mkdir(exist_ok=True)
     file_id = int(time.strftime('%Y%m%d%H%M%S', time.gmtime()))
     report_dir = Path(settings.TEST_REPORTS_PATH) / f'report_{file_id}'
@@ -104,7 +128,18 @@ def setup():
     return report_dir
 
 
-def create_index_html(report_dir, model_qa_mean_sd_data, model_judge_mean_sd_data):
+def create_index_html(report_dir, model_qa_mean_sd_data: list[dict], model_judge_mean_sd_data: list[dict]) -> None:
+    """Create HTML report to display scores for different forms when different judge and QA models used.
+
+    Args:
+        report_dir: Report directory
+        model_qa_mean_sd_data: Mean and standard deviation data when different QA models used
+        model_judge_mean_sd_data: Mean and standard deviation data when different judge models used
+
+    Returns:
+        None
+
+    """
     index_html_path = report_dir / 'index.html'
     model_qa_df = pandas.DataFrame.from_records(model_qa_mean_sd_data)
     model_qa_df.index = model_qa_df.index + 1
